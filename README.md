@@ -1,0 +1,92 @@
+# Vivarium
+
+A small 2D ecosystem simulation in Go + [Ebiten](https://ebitengine.org) where
+agent **behaviour evolves** rather than being programmed. Each organism is steered
+by a tiny hand-rolled neural network; there is no backpropagation — populations
+improve purely through reproduction with mutation.
+
+![screenshot](docs/screenshot.png)
+
+## The model
+
+A toroidal (wrap-around) world with three trophic tiers:
+
+| Tier | Drawn as | Eats | Eaten by |
+| --- | --- | --- | --- |
+| Plants (food) | green dots | — | herbivores |
+| Herbivores | blue circles | plants | carnivores |
+| Carnivores | red triangles | herbivores | — |
+
+Every agent has an energy budget. Energy drains each tick (a basal cost) and with
+movement; eating restores it. At zero energy the agent dies. Plants regrow energy
+over time toward a cap.
+
+## The brain
+
+Each agent's behaviour comes from a feedforward neural net (7 inputs → 8 hidden →
+3 outputs, `tanh` activations), implemented from scratch with flat `float64`
+slices — no ML libraries.
+
+**Inputs:** normalised energy; the relative bearing (cos/sin) and proximity of the
+nearest *target* (food for herbivores, prey for carnivores); and the bearing +
+proximity of the nearest *threat* (a predator). The proximity values act as the
+raycast-style distance sensors.
+
+**Outputs:** turn, speed, and an eat/act decision.
+
+## Evolution
+
+When an agent's energy crosses a threshold it reproduces, splitting its energy with
+an offspring. The child inherits a **clone of the parent's brain with small
+Gaussian weight mutations**, and its morphological traits — **size, max speed, and
+sense radius** — co-evolve via the same mutate-on-inherit rule. Over generations
+the population drifts toward viable strategies: foraging, seeking, and fleeing.
+
+## Controls
+
+| Key / action | Effect |
+| --- | --- |
+| `space` | pause / resume |
+| `+` or `=` | double simulation speed |
+| `-` | halve simulation speed |
+| left click | select the nearest agent and open its inspector |
+
+The HUD shows run state and live counts, a line chart tracks plant/herbivore/
+carnivore counts over time, and the inspector shows a selected agent's energy, age,
+generation, traits, and current neural inputs/outputs.
+
+## Running
+
+```sh
+go run ./cmd/vivarium            # default run
+go run ./cmd/vivarium -seed 42   # reproducible run
+```
+
+All randomness is drawn from a single seeded generator, so a given `-seed`
+reproduces the same run exactly.
+
+### Flags
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `-seed` | 1 | random seed |
+| `-width`, `-height` | 960, 720 | world size in pixels |
+| `-plants` | 160 | initial plant count |
+| `-herbivores` | 60 | initial herbivore count |
+| `-carnivores` | 12 | initial carnivore count |
+
+> On Linux you need the usual Ebiten build dependencies (OpenGL + X11 dev headers,
+> e.g. `libgl1-mesa-dev xorg-dev libxxf86vm-dev libasound2-dev`).
+
+## Layout
+
+```
+cmd/vivarium      entry point: flags, seeding, window setup
+internal/geom     2D vectors + toroidal math
+internal/neural   hand-rolled feedforward brain (+ tests)
+internal/sim      World, Agent, Food, Traits, evolution (+ tests)
+internal/render   Ebiten game loop, drawing, overlays, input
+```
+
+The `geom`, `neural`, and `sim` packages are pure Go with no Ebiten dependency, so
+the simulation core is unit-testable headlessly: `go test ./internal/...`.
