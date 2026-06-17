@@ -23,9 +23,13 @@ over time toward a cap.
 
 ## The brain
 
-Each agent's behaviour comes from a feedforward neural net (7 inputs → 8 hidden →
+Each agent's behaviour comes from a recurrent neural net (7 inputs → 8 hidden →
 3 outputs, `tanh` activations), implemented from scratch with flat `float64`
-slices — no ML libraries.
+slices — no ML libraries. The hidden layer feeds its previous activations back in
+(an Elman-style memory), so an agent can act on the recent past — keep fleeing for
+a moment after a predator drops out of range, wander, etc. — rather than reacting
+to the current senses alone. Offspring inherit the weights but start with a blank
+memory.
 
 **Inputs:** normalised energy; the relative bearing (cos/sin) and proximity of the
 nearest *target* (food for herbivores, prey for carnivores); and the bearing +

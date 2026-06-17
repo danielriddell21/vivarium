@@ -13,8 +13,10 @@ Model
 
 Brain
 
-	Each agent is steered by a tiny hand-rolled feedforward neural network (7
+	Each agent is steered by a tiny hand-rolled recurrent neural network (7
 	sensory inputs -> 8 hidden -> 3 outputs, tanh activations, no ML library).
+	The hidden layer is fed its own previous activations (an Elman-style memory),
+	so behaviour can depend on the recent past rather than being a pure reflex.
 	Inputs encode normalised energy and the relative bearing/proximity of the
 	nearest target (food/prey) and nearest threat (predator). Outputs are turn,
 	speed, and an eat decision.

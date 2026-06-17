@@ -88,8 +88,10 @@ type Agent struct {
 	ReproCooldown int
 
 	// Cached I/O from the most recent tick, surfaced by the inspector panel.
+	// LastMemory is the brain's recurrent state (previous hidden activations).
 	LastInputs  []float64
 	LastOutputs []float64
+	LastMemory  []float64
 }
 
 // sense builds the brain input vector by scanning the world within the agent's
@@ -144,10 +146,11 @@ func (a *Agent) relTo(w *World, p geom.Vec2, dist float64) (cos, sin, prox float
 }
 
 // think runs the brain on the current senses and caches the I/O for inspection.
+// The brain is recurrent, so each call also advances its internal memory.
 func (a *Agent) think(w *World) []float64 {
 	in := a.sense(w)
 	out := a.Brain.Forward(in)
-	a.LastInputs, a.LastOutputs = in, out
+	a.LastInputs, a.LastOutputs, a.LastMemory = in, out, a.Brain.State()
 	return out
 }
 

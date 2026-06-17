@@ -81,7 +81,7 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 
 	px := g.World.W - 230
 	py := 6.0
-	drawPanel(screen, px, py, 224, 232)
+	drawPanel(screen, px, py, 224, 268)
 
 	header := colHerbivore
 	if a.Kind == sim.Carnivore {
@@ -112,7 +112,41 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 	drawText(screen, "brain outputs", px+8, y, colSelected)
 	y += 15
 	outLabels := []string{"turn", "speed", "eat"}
-	drawVector(screen, a.LastOutputs, outLabels, px+8, y)
+	y = drawVector(screen, a.LastOutputs, outLabels, px+8, y)
+
+	y += 8
+	drawText(screen, "memory (recurrent)", px+8, y, colSelected)
+	y += 15
+	drawBars(screen, a.LastMemory, px+8, y, 208, 18)
+}
+
+// drawBars renders a row of signed bars for values in [-1, 1]: each bar grows up
+// (green) for positive values and down (red) for negative, from a centre line.
+func drawBars(screen *ebiten.Image, vals []float64, x, y, w, h float64) {
+	if len(vals) == 0 {
+		return
+	}
+	mid := y + h/2
+	vector.StrokeLine(screen, float32(x), float32(mid), float32(x+w), float32(mid), 1, colText, false)
+	slot := w / float64(len(vals))
+	bw := slot * 0.7
+	for i, v := range vals {
+		if v > 1 {
+			v = 1
+		} else if v < -1 {
+			v = -1
+		}
+		cx := x + float64(i)*slot + (slot-bw)/2
+		bh := v * (h / 2)
+		clr := colFood
+		top := mid - bh
+		if bh < 0 {
+			clr = colCarnivore
+			top = mid
+			bh = -bh
+		}
+		vector.DrawFilledRect(screen, float32(cx), float32(top), float32(bw), float32(bh), clr, false)
+	}
 }
 
 // drawVector prints a labelled list of values and returns the next y position.
