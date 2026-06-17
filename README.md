@@ -106,3 +106,10 @@ internal/render   Ebiten game loop, drawing, overlays, input
 
 The `geom`, `neural`, and `sim` packages are pure Go with no Ebiten dependency, so
 the simulation core is unit-testable headlessly: `go test ./internal/...`.
+
+## Related work
+
+- [Polyworld](https://github.com/polyworld/polyworld)
+- [The Bibites](https://www.thebibites.com/)
+- [Karl Sims' Evolved Virtual Creatures](https://en.wikipedia.org/wiki/Karl_Sims)
+- [Framsticks](https://www.framsticks.com/)
