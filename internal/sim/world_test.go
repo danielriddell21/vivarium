@@ -181,6 +181,33 @@ func TestVisionSectors(t *testing.T) {
 	}
 }
 
+// TestLearningDriftsPlasticBrains verifies that an agent with non-zero Plasticity
+// adapts its brain over its life, while a Plasticity-0 agent does not.
+func TestLearningDriftsPlasticBrains(t *testing.T) {
+	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(2))}
+	w.reindex()
+
+	plastic := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
+	plastic.Traits.Plasticity = 0.02
+	fixed := w.newAgent(Herbivore, geom2(50, 50), nil, Traits{}, 0)
+	fixed.Traits.Plasticity = 0
+
+	for _, a := range []*Agent{plastic, fixed} {
+		for i := 0; i < 50; i++ {
+			out := a.think(w)
+			a.act(w, out)
+			a.learn(6) // simulate repeatedly gaining energy
+		}
+	}
+
+	if plastic.Brain.LearnedDrift() <= 0 {
+		t.Fatal("plastic agent should have adapted its brain in life")
+	}
+	if fixed.Brain.LearnedDrift() != 0 {
+		t.Fatalf("non-plastic agent should not adapt, drift = %v", fixed.Brain.LearnedDrift())
+	}
+}
+
 func TestCarnivoreEatsHerbivore(t *testing.T) {
 	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0}
 	carn := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)

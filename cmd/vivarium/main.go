@@ -24,12 +24,22 @@ Brain
 
 Evolution
 
-	There is no backpropagation. When an agent's energy crosses a threshold it
-	reproduces, splitting its energy with an offspring that inherits a CLONE of
-	the parent's brain with small Gaussian weight mutations. Morphological traits
-	(size, max speed, sense radius) co-evolve via the same mutate-on-inherit rule.
-	Over generations the population drifts toward viable strategies (foraging,
-	seeking, fleeing).
+	When an agent's energy crosses a threshold it reproduces, splitting its energy
+	with an offspring that inherits a CLONE of the parent's genome (brain weights)
+	with small Gaussian mutations. Morphological traits (size, max speed, sense
+	radius) and a learning rate co-evolve via the same mutate-on-inherit rule. Over
+	generations the population drifts toward viable strategies (foraging, seeking,
+	fleeing).
+
+In-lifetime learning
+
+	On top of evolution, each brain also LEARNS during its own life. Every tick the
+	change in energy (eating = reward, costs/harm = penalty) drives a reward-
+	modulated Hebbian update of a working copy of the weights, so behaviour that
+	preceded reward is reinforced. The learning rate is the evolved Plasticity
+	trait (0 = a fixed brain). Learning is Baldwinian: offspring inherit the GENOME,
+	not what a parent learned, so each individual must learn anew — letting learning
+	and evolution be studied separately.
 
 Controls
 

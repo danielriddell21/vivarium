@@ -165,10 +165,13 @@ func (w *World) Step() {
 		if !a.Alive {
 			continue
 		}
+		before := a.Energy
 		out := a.think(w)
 		if a.act(w, out) {
 			w.resolveEat(a)
 		}
+		// Reinforce the behaviour that produced this tick's energy change.
+		a.learn(a.Energy - before)
 		if a.Energy <= 0 {
 			a.Alive = false
 			continue
