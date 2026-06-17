@@ -48,11 +48,24 @@ const (
 	BrainOutputs = 3
 )
 
+// Metabolism. Carnivores have ~3x the upkeep of herbivores, so when prey is
+// scarce they starve quickly. This predator self-limitation is what damps the
+// boom-bust collapse into coexistence.
 const (
-	maxTurnPerTick = 0.45 // radians
-	basalCost      = 0.06 // energy lost per tick just by being alive
-	moveCost       = 0.04 // additional energy lost per unit of speed
+	maxTurnPerTick = 0.45  // radians
+	herbBasalCost  = 0.06  // herbivore upkeep per tick
+	carnBasalCost  = 0.20  // carnivore upkeep per tick
+	moveCost       = 0.04  // additional energy lost per unit of speed
+	maxEnergy      = 200.0 // hard cap so a big meal can't be hoarded into many births
 )
+
+// basalCost returns the per-tick upkeep for the agent's kind.
+func (a *Agent) basalCost() float64 {
+	if a.Kind == Carnivore {
+		return carnBasalCost
+	}
+	return herbBasalCost
+}
 
 // Agent is a mobile organism driven by an evolved neural brain.
 type Agent struct {
@@ -67,6 +80,12 @@ type Agent struct {
 	Brain  *neural.Brain
 	Traits Traits
 	Alive  bool
+
+	// ReproCooldown is a gestation/maturation timer: an agent can only
+	// reproduce when it reaches zero. It prevents a predator from converting one
+	// large meal into an instant litter, which is the other half of the fix for
+	// runaway carnivore booms.
+	ReproCooldown int
 
 	// Cached I/O from the most recent tick, surfaced by the inspector panel.
 	LastInputs  []float64
@@ -144,7 +163,13 @@ func (a *Agent) act(w *World, out []float64) (wantsEat bool) {
 	}
 	a.Pos = a.Pos.Add(geom.FromAngle(a.Heading).Scale(speed)).WrapTo(w.W, w.H)
 
-	a.Energy -= basalCost + moveCost*speed
+	a.Energy -= a.basalCost() + moveCost*speed
+	if a.Energy > maxEnergy {
+		a.Energy = maxEnergy
+	}
+	if a.ReproCooldown > 0 {
+		a.ReproCooldown--
+	}
 	a.Age++
 	return out[2] > 0
 }

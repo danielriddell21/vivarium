@@ -13,27 +13,53 @@ const (
 	reproThreshold  = 120.0 // energy at which an agent reproduces
 	startEnergyHerb = 70.0
 	startEnergyCarn = 90.0
-	carnivoreGain   = 0.7  // fraction of prey energy a carnivore absorbs
-	carnivoreBonus  = 25.0 // flat energy bonus per kill
-	mutationRate    = 0.18 // per-weight probability of mutation in offspring
-	mutationStd     = 0.35 // std of Gaussian weight perturbation
-	historyEvery    = 6    // sample population counts every N ticks
-	maxHistory      = 1200 // cap on retained history samples
+	carnivoreGain   = 0.5 // fraction of prey energy a carnivore absorbs
+	carnivoreBonus  = 8.0 // flat energy bonus per kill; small so one kill alone
+	//                       does not instantly fund a birth
+	// Gestation/maturation cooldowns (ticks). Prey reproduce faster than
+	// predators, as in real food webs, so herbivores can recover from predation.
+	gestationHerb = 45
+	gestationCarn = 110
+	mutationRate  = 0.18 // per-weight probability of mutation in offspring
+	mutationStd   = 0.35 // std of Gaussian weight perturbation
+	historyEvery  = 6    // sample population counts every N ticks
+	maxHistory    = 1200 // cap on retained history samples
 )
+
+// gestation returns the post-reproduction cooldown for the given kind.
+func gestation(k Kind) int {
+	if k == Carnivore {
+		return gestationCarn
+	}
+	return gestationHerb
+}
+
+// rescueChance is the per-tick probability of one immigrant arriving for a tier
+// that has fallen below its rescue floor.
+const rescueChance = 0.05
 
 // Config holds the initial-population and world-size parameters.
 type Config struct {
 	Width, Height                  float64
 	Plants, Herbivores, Carnivores int
 	TargetPlants                   int // plant count the world tries to maintain
+
+	// Rescue enables a metapopulation "rescue effect": when a mobile tier drops
+	// below its floor, occasional immigrants arrive so the ecosystem recovers
+	// instead of collapsing to permanent extinction. Disable for raw dynamics.
+	Rescue                       bool
+	MinHerbivores, MinCarnivores int
 }
 
 // DefaultConfig returns a balanced starting configuration.
 func DefaultConfig() Config {
 	return Config{
 		Width: 960, Height: 720,
-		Plants: 160, Herbivores: 60, Carnivores: 12,
-		TargetPlants: 200,
+		Plants: 200, Herbivores: 80, Carnivores: 8,
+		TargetPlants:  260,
+		Rescue:        true,
+		MinHerbivores: 8,
+		MinCarnivores: 4,
 	}
 }
 
@@ -54,6 +80,9 @@ type World struct {
 	nextID int
 
 	targetPlants int
+	rescue       bool
+	minHerb      int
+	minCarn      int
 	history      []Counts
 }
 
@@ -64,6 +93,9 @@ func NewWorld(rng *rand.Rand, cfg Config) *World {
 		W: cfg.Width, H: cfg.Height,
 		rng:          rng,
 		targetPlants: cfg.TargetPlants,
+		rescue:       cfg.Rescue,
+		minHerb:      cfg.MinHerbivores,
+		minCarn:      cfg.MinCarnivores,
 	}
 	for i := 0; i < cfg.Plants; i++ {
 		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: foodMaxEnergy * rng.Float64()})
@@ -127,13 +159,14 @@ func (w *World) Step() {
 			a.Alive = false
 			continue
 		}
-		if a.Energy >= reproThreshold {
+		if a.ReproCooldown <= 0 && a.Energy >= reproThreshold {
 			newborns = append(newborns, w.reproduce(a))
 		}
 	}
 	w.Agents = append(w.Agents, newborns...)
 	w.compactDead()
 	w.maintainFood()
+	w.maintainPopulations()
 
 	w.Tick++
 	if w.Tick%historyEvery == 0 {
@@ -155,6 +188,9 @@ func (w *World) resolveEat(a *Agent) {
 		if prey := w.nearestAgentOfKind(a.Pos, Herbivore, reach, a.ID); prey != nil && prey.Alive {
 			prey.Alive = false
 			a.Energy += prey.Energy*carnivoreGain + carnivoreBonus
+			if a.Energy > maxEnergy {
+				a.Energy = maxEnergy
+			}
 		}
 	}
 }
@@ -169,8 +205,11 @@ func (w *World) reproduce(parent *Agent) *Agent {
 	brain.Mutate(w.rng, mutationRate, mutationStd)
 	traits := parent.Traits.mutated(w.rng)
 
+	parent.ReproCooldown = gestation(parent.Kind)
+
 	off := w.newAgent(parent.Kind, parent.Pos, brain, traits, parent.Generation+1)
 	off.Energy = child
+	off.ReproCooldown = gestation(parent.Kind) // maturation: newborns can't breed immediately
 	// Place the newborn a short random offset away so it does not perfectly
 	// overlap its parent.
 	off.Pos = off.Pos.Add(geom.FromAngle(w.rng.Float64()*2*math.Pi).Scale(parent.Traits.Size)).WrapTo(w.W, w.H)
@@ -194,6 +233,56 @@ func (w *World) maintainFood() {
 	if len(w.Foods) < w.targetPlants && w.rng.Float64() < 0.5 {
 		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: foodBiteEnergy})
 	}
+}
+
+// maintainPopulations applies the rescue effect: when a mobile tier sits below
+// its floor, immigrants occasionally arrive so the ecosystem can recover from a
+// near-collapse rather than going extinct for good.
+func (w *World) maintainPopulations() {
+	if !w.rescue {
+		return
+	}
+	c := w.CountKinds()
+	if c.Herbivores < w.minHerb && w.rng.Float64() < rescueChance {
+		w.immigrate(Herbivore)
+	}
+	if c.Carnivores < w.minCarn && w.rng.Float64() < rescueChance {
+		w.immigrate(Carnivore)
+	}
+}
+
+// immigrate introduces a single new agent of kind k. If any member of that tier
+// survives, the newcomer descends from a random survivor (cloned, mutated brain
+// and traits) so evolution continues; otherwise it arrives with a fresh brain.
+func (w *World) immigrate(k Kind) {
+	var brain *neural.Brain
+	var traits Traits
+	gen := 0
+	if donor := w.randomAgentOfKind(k); donor != nil {
+		brain = donor.Brain.Clone()
+		brain.Mutate(w.rng, mutationRate, mutationStd)
+		traits = donor.Traits.mutated(w.rng)
+		gen = donor.Generation
+	}
+	a := w.newAgent(k, w.randPos(), brain, traits, gen)
+	a.ReproCooldown = gestation(k) // immigrants must establish before breeding
+	w.Agents = append(w.Agents, a)
+}
+
+// randomAgentOfKind returns a uniformly random living agent of kind k, or nil.
+func (w *World) randomAgentOfKind(k Kind) *Agent {
+	var chosen *Agent
+	seen := 0
+	for _, a := range w.Agents {
+		if !a.Alive || a.Kind != k {
+			continue
+		}
+		seen++
+		if w.rng.Intn(seen) == 0 { // reservoir sampling, size 1
+			chosen = a
+		}
+	}
+	return chosen
 }
 
 // nearestRipeFood returns the closest ripe plant within radius of pos, or nil.

@@ -83,6 +83,73 @@ func TestReproductionIncreasesGeneration(t *testing.T) {
 	}
 }
 
+// TestReproduceSetsCooldown verifies the gestation/maturation timers that stop a
+// single large meal from becoming an instant litter.
+func TestReproduceSetsCooldown(t *testing.T) {
+	w := NewWorld(rand.New(rand.NewSource(3)), testConfig())
+	parent := w.Agents[0]
+	parent.Energy = reproThreshold + 10
+	parent.ReproCooldown = 0
+	child := w.reproduce(parent)
+	if parent.ReproCooldown != gestation(parent.Kind) {
+		t.Fatalf("parent cooldown = %d, want %d", parent.ReproCooldown, gestation(parent.Kind))
+	}
+	if child.ReproCooldown != gestation(parent.Kind) {
+		t.Fatalf("child cooldown = %d, want %d", child.ReproCooldown, gestation(parent.Kind))
+	}
+}
+
+// TestRescueRepopulates verifies the rescue effect: after a tier is wiped out,
+// immigration brings it back rather than leaving it extinct forever.
+func TestRescueRepopulates(t *testing.T) {
+	cfg := testConfig()
+	cfg.Rescue = true
+	cfg.MinHerbivores, cfg.MinCarnivores = 8, 4
+	cfg.Carnivores = 0 // isolate herbivore rescue from predation
+	w := NewWorld(rand.New(rand.NewSource(4)), cfg)
+
+	// Wipe out every herbivore.
+	for _, a := range w.Agents {
+		if a.Kind == Herbivore {
+			a.Alive = false
+		}
+	}
+	w.compactDead()
+	if w.CountKinds().Herbivores != 0 {
+		t.Fatal("setup failed: herbivores should be zero")
+	}
+
+	recovered := false
+	for i := 0; i < 1000 && !recovered; i++ {
+		w.Step()
+		if w.CountKinds().Herbivores > 0 {
+			recovered = true
+		}
+	}
+	if !recovered {
+		t.Fatal("rescue effect did not repopulate herbivores within 1000 ticks")
+	}
+}
+
+// TestRescueDisabledStaysExtinct confirms that with rescue off a wiped tier does
+// not magically return.
+func TestRescueDisabledStaysExtinct(t *testing.T) {
+	cfg := testConfig()
+	cfg.Rescue = false
+	cfg.Carnivores = 0
+	w := NewWorld(rand.New(rand.NewSource(4)), cfg)
+	for _, a := range w.Agents {
+		a.Alive = false
+	}
+	w.compactDead()
+	for i := 0; i < 300; i++ {
+		w.Step()
+	}
+	if c := w.CountKinds(); c.Herbivores != 0 || c.Carnivores != 0 {
+		t.Fatalf("no rescue expected, got %+v", c)
+	}
+}
+
 func TestCarnivoreEatsHerbivore(t *testing.T) {
 	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0}
 	carn := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)
