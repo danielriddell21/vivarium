@@ -66,10 +66,12 @@ func main() {
 	plants := flag.Int("plants", cfg.Plants, "initial plant count")
 	herbivores := flag.Int("herbivores", cfg.Herbivores, "initial herbivore count")
 	carnivores := flag.Int("carnivores", cfg.Carnivores, "initial carnivore count")
+	rescue := flag.Bool("rescue", cfg.Rescue, "rescue effect: immigrants arrive when a tier nears extinction")
 	flag.Parse()
 
 	cfg.Width, cfg.Height = *width, *height
 	cfg.Plants, cfg.Herbivores, cfg.Carnivores = *plants, *herbivores, *carnivores
+	cfg.Rescue = *rescue
 	if cfg.TargetPlants < cfg.Plants {
 		cfg.TargetPlants = cfg.Plants
 	}

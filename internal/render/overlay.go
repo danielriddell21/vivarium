@@ -93,7 +93,7 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 	rows := []string{
 		fmt.Sprintf("energy %.1f", a.Energy),
 		fmt.Sprintf("age %d   gen %d", a.Age, a.Generation),
-		fmt.Sprintf("heading %.0f deg", radToDeg(a.Heading)),
+		fmt.Sprintf("heading %.0f deg", normDeg(radToDeg(a.Heading))),
 		fmt.Sprintf("size %.1f  speed %.2f", a.Traits.Size, a.Traits.MaxSpeed),
 		fmt.Sprintf("sense %.0f", a.Traits.SenseRadius),
 	}

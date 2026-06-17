@@ -5,7 +5,7 @@ agent **behaviour evolves** rather than being programmed. Each organism is steer
 by a tiny hand-rolled neural network; there is no backpropagation — populations
 improve purely through reproduction with mutation.
 
-![screenshot](docs/screenshot.png)
+![demo](docs/demo.gif)
 
 ## The model
 
@@ -42,6 +42,21 @@ Gaussian weight mutations**, and its morphological traits — **size, max speed,
 sense radius** — co-evolve via the same mutate-on-inherit rule. Over generations
 the population drifts toward viable strategies: foraging, seeking, and fleeing.
 
+### Population stability
+
+Naïve predator–prey agent worlds tend to collapse: carnivores overshoot, eat every
+herbivore, then starve all at once. Three mechanisms damp this into coexistence:
+
+- **Predator metabolism** — carnivores burn energy ~3x faster than herbivores, so
+  when prey is scarce they decline quickly instead of lingering.
+- **Gestation cooldown** — a kill can't be turned into an instant litter; predators
+  also reproduce more slowly than prey (as in real food webs), and an energy cap
+  stops a big meal from being hoarded into many births.
+- **Rescue effect** (`-rescue`, on by default) — if a tier nears extinction, rare
+  immigrants arrive (descended from survivors when any remain, so evolution
+  continues), modelling a metapopulation rescue. Pass `-rescue=false` for the raw,
+  collapse-prone dynamics.
+
 ## Controls
 
 | Key / action | Effect |
@@ -71,9 +86,10 @@ reproduces the same run exactly.
 | --- | --- | --- |
 | `-seed` | 1 | random seed |
 | `-width`, `-height` | 960, 720 | world size in pixels |
-| `-plants` | 160 | initial plant count |
-| `-herbivores` | 60 | initial herbivore count |
-| `-carnivores` | 12 | initial carnivore count |
+| `-plants` | 200 | initial plant count |
+| `-herbivores` | 80 | initial herbivore count |
+| `-carnivores` | 8 | initial carnivore count |
+| `-rescue` | true | immigration when a tier nears extinction (set `false` for raw dynamics) |
 
 > On Linux you need the usual Ebiten build dependencies (OpenGL + X11 dev headers,
 > e.g. `libgl1-mesa-dev xorg-dev libxxf86vm-dev libasound2-dev`).

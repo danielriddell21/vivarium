@@ -116,3 +116,12 @@ func drawPanel(dst *ebiten.Image, x, y, w, h float64) {
 }
 
 func radToDeg(r float64) float64 { return r * 180 / math.Pi }
+
+// normDeg normalises an angle in degrees to the range [0, 360).
+func normDeg(d float64) float64 {
+	d = math.Mod(d, 360)
+	if d < 0 {
+		d += 360
+	}
+	return d
+}
