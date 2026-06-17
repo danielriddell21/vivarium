@@ -23,19 +23,24 @@ func (k Kind) String() string {
 	return "Herbivore"
 }
 
-// Neural network dimensions shared by every brain. Inputs:
+// Sensing & neural network dimensions shared by every brain.
 //
-//	0: own energy (normalised, ~0..1)
-//	1: cos of angle to nearest target relative to heading
-//	2: sin of angle to nearest target relative to heading
-//	3: proximity of nearest target (0 = none/far, 1 = adjacent)
-//	4: cos of angle to nearest threat relative to heading
-//	5: sin of angle to nearest threat relative to heading
-//	6: proximity of nearest threat (0 = none/far, 1 = adjacent)
+// Vision is a ring of VisionSectors equal-angle sectors covering the full 360°
+// around the agent, oriented relative to its heading (sector 0 points straight
+// ahead, sectors proceed counter-clockwise). Each sector reports the proximity
+// (0 = nothing/at the sense-radius edge, 1 = adjacent) of the nearest thing it
+// sees, on two channels:
 //
-// A "target" is what the agent eats (plants for herbivores, herbivores for
-// carnivores); a "threat" is what eats it (carnivores for herbivores; none for
-// carnivores). The proximity inputs double as the raycast-style distance sensors.
+//	target channel — what the agent eats (plants for herbivores, herbivores for
+//	                 carnivores)
+//	threat channel — what eats it (carnivores for herbivores; always empty for
+//	                 carnivores, which are apex predators)
+//
+// Inputs are laid out as:
+//
+//	[0 .. VisionSectors)               target-channel proximity per sector
+//	[VisionSectors .. 2*VisionSectors) threat-channel proximity per sector
+//	[2*VisionSectors]                  own energy (normalised, ~0..1)
 //
 // Outputs:
 //
@@ -43,9 +48,10 @@ func (k Kind) String() string {
 //	1: speed  (-1..1, mapped to 0..MaxSpeed)
 //	2: eat    (>0 means attempt to feed this tick)
 const (
-	BrainInputs  = 7
-	BrainHidden  = 8
-	BrainOutputs = 3
+	VisionSectors = 6
+	BrainInputs   = VisionSectors*2 + 1
+	BrainHidden   = 10
+	BrainOutputs  = 3
 )
 
 // Metabolism. Carnivores have ~3x the upkeep of herbivores, so when prey is
@@ -94,55 +100,64 @@ type Agent struct {
 	LastMemory  []float64
 }
 
-// sense builds the brain input vector by scanning the world within the agent's
-// sense radius for the nearest target and threat.
+// sense builds the brain input vector by casting the agent's vision over the
+// world: every visible target and threat within the sense radius is binned into
+// the directional sector it falls in, keeping the nearest (highest proximity) per
+// sector. See the input-layout comment above.
 func (a *Agent) sense(w *World) []float64 {
 	in := make([]float64, BrainInputs)
-	in[0] = clamp(a.Energy/reproThreshold, 0, 1.5)
+	in[2*VisionSectors] = clamp(a.Energy/reproThreshold, 0, 1.5)
 
-	var target, threat geom.Vec2
-	var haveTarget, haveThreat bool
-	var targetDist, threatDist float64
+	// These sub-slices share backing storage with in, so writing to them fills
+	// the corresponding input ranges directly.
+	target := in[0:VisionSectors]
+	threat := in[VisionSectors : 2*VisionSectors]
 
 	switch a.Kind {
 	case Herbivore:
-		if f := w.nearestRipeFood(a.Pos, a.Traits.SenseRadius); f != nil {
-			target, haveTarget = f.Pos, true
-			targetDist = a.Pos.ToroidalDist(f.Pos, w.W, w.H)
+		for _, f := range w.Foods {
+			if f.Ripe() {
+				a.see(w, f.Pos, target)
+			}
 		}
-		if c := w.nearestAgentOfKind(a.Pos, Carnivore, a.Traits.SenseRadius, a.ID); c != nil {
-			threat, haveThreat = c.Pos, true
-			threatDist = a.Pos.ToroidalDist(c.Pos, w.W, w.H)
-		}
+		a.seeAgents(w, Carnivore, threat)
 	case Carnivore:
-		if h := w.nearestAgentOfKind(a.Pos, Herbivore, a.Traits.SenseRadius, a.ID); h != nil {
-			target, haveTarget = h.Pos, true
-			targetDist = a.Pos.ToroidalDist(h.Pos, w.W, w.H)
-		}
+		a.seeAgents(w, Herbivore, target)
 		// Carnivores are apex predators here: no threat channel.
-	}
-
-	if haveTarget {
-		cos, sin, prox := a.relTo(w, target, targetDist)
-		in[1], in[2], in[3] = cos, sin, prox
-	}
-	if haveThreat {
-		cos, sin, prox := a.relTo(w, threat, threatDist)
-		in[4], in[5], in[6] = cos, sin, prox
 	}
 	return in
 }
 
-// relTo returns the cosine and sine of the angle from the agent's heading to the
-// point p, plus a 0..1 proximity value (1 when adjacent, 0 at the sense edge).
-func (a *Agent) relTo(w *World, p geom.Vec2, dist float64) (cos, sin, prox float64) {
-	d := a.Pos.ShortestDelta(p, w.W, w.H)
-	rel := d.Angle() - a.Heading
-	prox = 1 - dist/a.Traits.SenseRadius
-	if prox < 0 {
-		prox = 0
+// seeAgents bins every living agent of kind k (other than the observer) into the
+// given vision channel.
+func (a *Agent) seeAgents(w *World, k Kind, sectors []float64) {
+	for _, o := range w.Agents {
+		if o.Alive && o.Kind == k && o.ID != a.ID {
+			a.see(w, o.Pos, sectors)
+		}
 	}
-	return math.Cos(rel), math.Sin(rel), prox
+}
+
+// see records the proximity of point p into whichever vision sector it lies in,
+// relative to the agent's heading, keeping the maximum (nearest) per sector.
+// Points beyond the sense radius are ignored.
+func (a *Agent) see(w *World, p geom.Vec2, sectors []float64) {
+	d := a.Pos.ShortestDelta(p, w.W, w.H)
+	dist := d.Len()
+	if dist == 0 || dist > a.Traits.SenseRadius {
+		return
+	}
+	rel := math.Mod(d.Angle()-a.Heading, 2*math.Pi)
+	if rel < 0 {
+		rel += 2 * math.Pi
+	}
+	sec := int(rel / (2 * math.Pi / VisionSectors))
+	if sec >= VisionSectors { // guard the boundary case rel ≈ 2π
+		sec = VisionSectors - 1
+	}
+	if prox := 1 - dist/a.Traits.SenseRadius; prox > sectors[sec] {
+		sectors[sec] = prox
+	}
 }
 
 // think runs the brain on the current senses and caches the I/O for inspection.

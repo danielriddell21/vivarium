@@ -81,7 +81,7 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 
 	px := g.World.W - 230
 	py := 6.0
-	drawPanel(screen, px, py, 224, 268)
+	drawPanel(screen, px, py, 224, 300)
 
 	header := colHerbivore
 	if a.Kind == sim.Carnivore {
@@ -102,13 +102,20 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 		y += 15
 	}
 
-	y += 6
-	drawText(screen, "brain inputs", px+8, y, colSelected)
-	y += 15
-	inLabels := []string{"energy", "tgt.cos", "tgt.sin", "tgt.near", "thr.cos", "thr.sin", "thr.near"}
-	y = drawVector(screen, a.LastInputs, inLabels, px+8, y)
+	// Vision: two directional bar strips (sector 0 = straight ahead). Guard
+	// against a just-spawned agent that has not sensed yet.
+	if len(a.LastInputs) >= 2*sim.VisionSectors {
+		y += 6
+		drawText(screen, "vision: targets", px+8, y, colSelected)
+		y += 15
+		drawLevelBars(screen, a.LastInputs[0:sim.VisionSectors], px+8, y, 208, 16, colFood)
+		y += 21
+		drawText(screen, "vision: threats", px+8, y, colSelected)
+		y += 15
+		drawLevelBars(screen, a.LastInputs[sim.VisionSectors:2*sim.VisionSectors], px+8, y, 208, 16, colCarnivore)
+		y += 21
+	}
 
-	y += 6
 	drawText(screen, "brain outputs", px+8, y, colSelected)
 	y += 15
 	outLabels := []string{"turn", "speed", "eat"}
@@ -118,6 +125,28 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 	drawText(screen, "memory (recurrent)", px+8, y, colSelected)
 	y += 15
 	drawBars(screen, a.LastMemory, px+8, y, 208, 18)
+}
+
+// drawLevelBars renders a row of upward bars for values in [0, 1] in clr, from a
+// baseline at the bottom of the strip.
+func drawLevelBars(screen *ebiten.Image, vals []float64, x, y, w, h float64, clr color.Color) {
+	if len(vals) == 0 {
+		return
+	}
+	base := y + h
+	vector.StrokeLine(screen, float32(x), float32(base), float32(x+w), float32(base), 1, colText, false)
+	slot := w / float64(len(vals))
+	bw := slot * 0.7
+	for i, v := range vals {
+		if v > 1 {
+			v = 1
+		} else if v < 0 {
+			v = 0
+		}
+		cx := x + float64(i)*slot + (slot-bw)/2
+		bh := v * h
+		vector.DrawFilledRect(screen, float32(cx), float32(base-bh), float32(bw), float32(bh), clr, false)
+	}
 }
 
 // drawBars renders a row of signed bars for values in [-1, 1]: each bar grows up
