@@ -161,6 +161,7 @@ func TestVisionSectors(t *testing.T) {
 	food := &Food{Pos: geom2(140, 100), Energy: foodMaxEnergy}     // due east, ahead, sector 0
 	w.Agents = []*Agent{herb, carn}
 	w.Foods = []*Food{food}
+	w.reindex()
 
 	in := herb.sense(w)
 
@@ -185,6 +186,7 @@ func TestCarnivoreEatsHerbivore(t *testing.T) {
 	carn := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)
 	herb := w.newAgent(Herbivore, geom2(101, 100), nil, Traits{}, 0)
 	w.Agents = []*Agent{carn, herb}
+	w.reindex()
 	e0 := carn.Energy
 	w.resolveEat(carn)
 	if herb.Alive {
@@ -201,6 +203,7 @@ func TestHerbivoreEatsFood(t *testing.T) {
 	food := &Food{Pos: geom2(51, 50), Energy: foodMaxEnergy}
 	w.Agents = []*Agent{herb}
 	w.Foods = []*Food{food}
+	w.reindex()
 	e0 := herb.Energy
 	w.resolveEat(herb)
 	if herb.Energy <= e0 {

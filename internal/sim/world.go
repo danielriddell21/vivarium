@@ -84,6 +84,18 @@ type World struct {
 	minHerb      int
 	minCarn      int
 	history      []Counts
+
+	grid *spatialGrid
+}
+
+// reindex rebuilds the spatial grid from the current entity positions. It is
+// called once per tick (and after world construction) so that all neighbour
+// queries within the tick share a consistent, deterministic index.
+func (w *World) reindex() {
+	if w.grid == nil {
+		w.grid = newSpatialGrid(w.W, w.H, gridCellSize)
+	}
+	w.grid.rebuild(w.Foods, w.Agents)
 }
 
 // NewWorld builds a world from cfg, seeding plants and agents at random
@@ -106,6 +118,7 @@ func NewWorld(rng *rand.Rand, cfg Config) *World {
 	for i := 0; i < cfg.Carnivores; i++ {
 		w.Agents = append(w.Agents, w.newAgent(Carnivore, w.randPos(), nil, Traits{}, 0))
 	}
+	w.reindex()
 	w.sampleHistory()
 	return w
 }
@@ -145,6 +158,7 @@ func (w *World) Step() {
 	for _, f := range w.Foods {
 		f.regrow()
 	}
+	w.reindex()
 
 	var newborns []*Agent
 	for _, a := range w.Agents {
@@ -289,15 +303,14 @@ func (w *World) randomAgentOfKind(k Kind) *Agent {
 func (w *World) nearestRipeFood(pos geom.Vec2, radius float64) *Food {
 	var best *Food
 	bestD := radius
-	for _, f := range w.Foods {
+	w.grid.forEachFoodNear(pos, radius, func(f *Food) {
 		if !f.Ripe() {
-			continue
+			return
 		}
-		d := pos.ToroidalDist(f.Pos, w.W, w.H)
-		if d <= bestD {
+		if d := pos.ToroidalDist(f.Pos, w.W, w.H); d <= bestD {
 			bestD, best = d, f
 		}
-	}
+	})
 	return best
 }
 
@@ -306,15 +319,14 @@ func (w *World) nearestRipeFood(pos geom.Vec2, radius float64) *Food {
 func (w *World) nearestAgentOfKind(pos geom.Vec2, k Kind, radius float64, excludeID int) *Agent {
 	var best *Agent
 	bestD := radius
-	for _, a := range w.Agents {
+	w.grid.forEachAgentNear(pos, radius, func(a *Agent) {
 		if !a.Alive || a.Kind != k || a.ID == excludeID {
-			continue
+			return
 		}
-		d := pos.ToroidalDist(a.Pos, w.W, w.H)
-		if d <= bestD {
+		if d := pos.ToroidalDist(a.Pos, w.W, w.H); d <= bestD {
 			bestD, best = d, a
 		}
-	}
+	})
 	return best
 }
 

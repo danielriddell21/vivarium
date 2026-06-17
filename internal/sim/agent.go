@@ -103,7 +103,8 @@ type Agent struct {
 // sense builds the brain input vector by casting the agent's vision over the
 // world: every visible target and threat within the sense radius is binned into
 // the directional sector it falls in, keeping the nearest (highest proximity) per
-// sector. See the input-layout comment above.
+// sector. Candidates come from the spatial grid, so the scan cost depends on local
+// density rather than total population. See the input-layout comment above.
 func (a *Agent) sense(w *World) []float64 {
 	in := make([]float64, BrainInputs)
 	in[2*VisionSectors] = clamp(a.Energy/reproThreshold, 0, 1.5)
@@ -112,30 +113,29 @@ func (a *Agent) sense(w *World) []float64 {
 	// the corresponding input ranges directly.
 	target := in[0:VisionSectors]
 	threat := in[VisionSectors : 2*VisionSectors]
+	r := a.Traits.SenseRadius
 
 	switch a.Kind {
 	case Herbivore:
-		for _, f := range w.Foods {
+		w.grid.forEachFoodNear(a.Pos, r, func(f *Food) {
 			if f.Ripe() {
 				a.see(w, f.Pos, target)
 			}
-		}
-		a.seeAgents(w, Carnivore, threat)
+		})
+		w.grid.forEachAgentNear(a.Pos, r, func(o *Agent) {
+			if o.Alive && o.Kind == Carnivore && o.ID != a.ID {
+				a.see(w, o.Pos, threat)
+			}
+		})
 	case Carnivore:
-		a.seeAgents(w, Herbivore, target)
+		w.grid.forEachAgentNear(a.Pos, r, func(o *Agent) {
+			if o.Alive && o.Kind == Herbivore && o.ID != a.ID {
+				a.see(w, o.Pos, target)
+			}
+		})
 		// Carnivores are apex predators here: no threat channel.
 	}
 	return in
-}
-
-// seeAgents bins every living agent of kind k (other than the observer) into the
-// given vision channel.
-func (a *Agent) seeAgents(w *World, k Kind, sectors []float64) {
-	for _, o := range w.Agents {
-		if o.Alive && o.Kind == k && o.ID != a.ID {
-			a.see(w, o.Pos, sectors)
-		}
-	}
 }
 
 // see records the proximity of point p into whichever vision sector it lies in,
