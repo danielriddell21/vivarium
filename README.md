@@ -23,7 +23,7 @@ over time toward a cap.
 
 ## The brain
 
-Each agent's behaviour comes from a recurrent neural net (7 inputs → 8 hidden →
+Each agent's behaviour comes from a recurrent neural net (13 inputs → 10 hidden →
 3 outputs, `tanh` activations), implemented from scratch with flat `float64`
 slices — no ML libraries. The hidden layer feeds its previous activations back in
 (an Elman-style memory), so an agent can act on the recent past — keep fleeing for
@@ -31,10 +31,11 @@ a moment after a predator drops out of range, wander, etc. — rather than react
 to the current senses alone. Offspring inherit the weights but start with a blank
 memory.
 
-**Inputs:** normalised energy; the relative bearing (cos/sin) and proximity of the
-nearest *target* (food for herbivores, prey for carnivores); and the bearing +
-proximity of the nearest *threat* (a predator). The proximity values act as the
-raycast-style distance sensors.
+**Inputs:** directional **vision** — a ring of 6 sectors around the agent (sector 0
+points straight ahead), each reporting the proximity of the nearest *target* (food
+for herbivores, prey for carnivores) and nearest *threat* (a predator) seen in that
+direction — plus the agent's own normalised energy. Two channels × 6 sectors + 1 =
+13 inputs. The proximity values double as the raycast-style distance sensors.
 
 **Outputs:** turn, speed, and an eat/act decision.
 

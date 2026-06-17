@@ -150,6 +150,36 @@ func TestRescueDisabledStaysExtinct(t *testing.T) {
 	}
 }
 
+// TestVisionSectors checks that targets and threats are binned into the correct
+// directional sector relative to the agent's heading.
+func TestVisionSectors(t *testing.T) {
+	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1))}
+	herb := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
+	herb.Heading = 0 // facing +x (east)
+	herb.Traits.SenseRadius = 200
+	carn := w.newAgent(Carnivore, geom2(60, 60), nil, Traits{}, 0) // behind-left at 225°, sector 3
+	food := &Food{Pos: geom2(140, 100), Energy: foodMaxEnergy}     // due east, ahead, sector 0
+	w.Agents = []*Agent{herb, carn}
+	w.Foods = []*Food{food}
+
+	in := herb.sense(w)
+
+	if in[0] <= 0 {
+		t.Fatalf("food due ahead should light target sector 0, got %v", in[0])
+	}
+	if in[VisionSectors+3] <= 0 {
+		t.Fatalf("predator due behind should light threat sector 3, got %v", in[VisionSectors+3])
+	}
+	if in[2*VisionSectors] <= 0 {
+		t.Fatal("energy input should be set")
+	}
+	for s := 1; s < VisionSectors; s++ {
+		if in[s] != 0 {
+			t.Fatalf("unexpected target proximity in sector %d: %v", s, in[s])
+		}
+	}
+}
+
 func TestCarnivoreEatsHerbivore(t *testing.T) {
 	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0}
 	carn := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)
