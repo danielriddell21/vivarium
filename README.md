@@ -42,10 +42,29 @@ direction — plus the agent's own normalised energy. Two channels × 6 sectors 
 ## Evolution
 
 When an agent's energy crosses a threshold it reproduces, splitting its energy with
-an offspring. The child inherits a **clone of the parent's brain with small
-Gaussian weight mutations**, and its morphological traits — **size, max speed, and
-sense radius** — co-evolve via the same mutate-on-inherit rule. Over generations
-the population drifts toward viable strategies: foraging, seeking, and fleeing.
+an offspring. The child inherits a **clone of the parent's genome (brain weights)
+with small Gaussian mutations**, and its traits — **size, max speed, sense radius,
+and learning rate** — co-evolve via the same mutate-on-inherit rule. Over
+generations the population drifts toward viable strategies: foraging, seeking, and
+fleeing.
+
+## In-lifetime learning
+
+Evolution only changes brains *between* generations. On top of it, each brain also
+**learns during its own life**: every tick the change in energy (eating rewards,
+costs/harm penalise) drives a **reward-modulated Hebbian** update of a working copy
+of the weights, reinforcing whatever activity preceded reward. An advantage signal
+(reward minus a running baseline) keeps routine ticks from biasing the weights, and
+weights are clamped so the unsupervised rule can't run away.
+
+How much an agent learns is set by its evolved **`Plasticity`** trait (0 = a fixed,
+non-learning brain) — so evolution itself decides how plastic each lineage should
+be. Learning is **Baldwinian**: offspring inherit the *genome* (birth weights), not
+what a parent learned, so every individual must learn anew. This keeps the two
+adaptation processes separate and lets you watch the classic **Baldwin effect** —
+the ability to learn being selected for. The inspector shows each agent's
+`plasticity`, its current `reward`, and `learned` (how far lifetime learning has
+moved its weights from the inherited genome).
 
 ### Population stability
 

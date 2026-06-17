@@ -98,6 +98,31 @@ type Agent struct {
 	LastInputs  []float64
 	LastOutputs []float64
 	LastMemory  []float64
+
+	// In-lifetime learning state. rewardBaseline is a running average of recent
+	// reward; the learning rule is driven by the advantage (reward - baseline) so
+	// routine ticks don't bias the weights. LastReward is the latest advantage,
+	// surfaced by the inspector.
+	rewardBaseline float64
+	LastReward     float64
+}
+
+// Learning rule constants.
+const (
+	rewardScale = 0.08 // squashes per-tick energy change into a bounded reward
+	baselineLR  = 0.02 // how fast the reward baseline tracks recent reward
+)
+
+// learn turns the energy change over this tick into a reward-modulated Hebbian
+// update of the agent's brain. deltaEnergy is the net energy gained or lost this
+// tick (positive = ate, negative = spent/hurt). Learning strength is the agent's
+// evolved Plasticity trait; with Plasticity 0 this is a no-op.
+func (a *Agent) learn(deltaEnergy float64) {
+	r := math.Tanh(deltaEnergy * rewardScale)
+	adv := r - a.rewardBaseline
+	a.rewardBaseline += baselineLR * (r - a.rewardBaseline)
+	a.LastReward = adv
+	a.Brain.Learn(adv, a.Traits.Plasticity)
 }
 
 // sense builds the brain input vector by casting the agent's vision over the

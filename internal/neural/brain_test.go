@@ -105,28 +105,97 @@ func TestCloneIsDeepAndIndependent(t *testing.T) {
 func TestMutateChangesWeights(t *testing.T) {
 	rng := rand.New(rand.NewSource(9))
 	b := New(rng, 4, 4, 2)
-	before := append([]float64(nil), b.WIH...)
+	before := append([]float64(nil), b.genome.WIH...)
 
 	b.Mutate(rng, 1.0, 0.5) // rate 1.0 => every weight perturbed
 	changed := 0
-	for i := range b.WIH {
-		if math.Abs(b.WIH[i]-before[i]) > 0 {
+	for i := range b.genome.WIH {
+		if math.Abs(b.genome.WIH[i]-before[i]) > 0 {
 			changed++
 		}
 	}
 	if changed == 0 {
-		t.Fatal("expected weights to change after full-rate mutation")
+		t.Fatal("expected genome weights to change after full-rate mutation")
 	}
 }
 
 func TestMutateZeroRateIsNoOp(t *testing.T) {
 	rng := rand.New(rand.NewSource(11))
 	b := New(rng, 3, 3, 2)
-	before := append([]float64(nil), b.WHO...)
+	before := append([]float64(nil), b.genome.WHO...)
 	b.Mutate(rng, 0.0, 1.0)
-	for i := range b.WHO {
-		if b.WHO[i] != before[i] {
+	for i := range b.genome.WHO {
+		if b.genome.WHO[i] != before[i] {
 			t.Fatalf("zero-rate mutation changed weight %d", i)
+		}
+	}
+}
+
+// TestLearnModifiesLiveNotGenome verifies in-lifetime learning adapts the working
+// weights while leaving the heritable genome untouched.
+func TestLearnModifiesLiveNotGenome(t *testing.T) {
+	b := New(rand.New(rand.NewSource(5)), 4, 5, 2)
+	genomeBefore := append([]float64(nil), b.genome.WHO...)
+
+	b.Forward([]float64{0.6, -0.4, 0.9, 0.1})
+	b.Learn(1.0, 0.1) // positive reward, non-zero rate
+
+	if b.LearnedDrift() <= 0 {
+		t.Fatal("expected live weights to drift after learning")
+	}
+	for i := range b.genome.WHO {
+		if b.genome.WHO[i] != genomeBefore[i] {
+			t.Fatalf("genome weight %d changed during learning (should be immutable)", i)
+		}
+	}
+}
+
+// TestLearnReinforcesOutput checks the rule moves outputs in the rewarded
+// direction: repeatedly rewarding the response to a fixed input should amplify the
+// dominant output over time.
+func TestLearnReinforcesOutput(t *testing.T) {
+	b := New(rand.New(rand.NewSource(8)), 4, 6, 2)
+	in := []float64{0.8, -0.2, 0.5, 0.3}
+
+	b.Reset()
+	first := b.Forward(in)
+	idx := 0
+	if math.Abs(first[1]) > math.Abs(first[0]) {
+		idx = 1
+	}
+	mag0 := math.Abs(first[idx])
+
+	for i := 0; i < 50; i++ {
+		out := b.Forward(in)
+		// Reward in the sign of the current dominant output to reinforce it.
+		b.Learn(math.Copysign(1, out[idx]), 0.05)
+	}
+	b.Reset()
+	magN := math.Abs(b.Forward(in)[idx])
+
+	if magN <= mag0 {
+		t.Fatalf("expected reinforced output to grow: %.4f -> %.4f", mag0, magN)
+	}
+}
+
+// TestCloneInheritsGenomeNotLearning confirms Baldwinian inheritance: a child
+// starts from the parent's genome, not its learned live weights.
+func TestCloneInheritsGenomeNotLearning(t *testing.T) {
+	b := New(rand.New(rand.NewSource(17)), 4, 4, 2)
+	for i := 0; i < 30; i++ {
+		b.Forward([]float64{1, -1, 0.5, 0.2})
+		b.Learn(1.0, 0.1)
+	}
+	if b.LearnedDrift() == 0 {
+		t.Fatal("setup: parent should have learned something")
+	}
+	child := b.Clone()
+	if child.LearnedDrift() != 0 {
+		t.Fatal("child should start with live == genome (no inherited learning)")
+	}
+	for i := range child.genome.WHO {
+		if child.genome.WHO[i] != b.genome.WHO[i] {
+			t.Fatalf("child genome should match parent genome at %d", i)
 		}
 	}
 }
