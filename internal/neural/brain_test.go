@@ -24,10 +24,52 @@ func TestForwardDeterministic(t *testing.T) {
 	b := New(rand.New(rand.NewSource(42)), 4, 5, 2)
 	in := []float64{0.1, 0.2, 0.3, 0.4}
 	a := b.Forward(in)
+	b.Reset() // clear memory so the second pass starts from the same state
 	c := b.Forward(in)
 	for i := range a {
 		if a[i] != c[i] {
 			t.Fatalf("forward not deterministic at %d: %v vs %v", i, a[i], c[i])
+		}
+	}
+}
+
+// TestRecurrenceCarriesState verifies the network is stateful: feeding the same
+// input twice gives different outputs (the memory advanced), and Reset restores
+// the original response.
+func TestRecurrenceCarriesState(t *testing.T) {
+	b := New(rand.New(rand.NewSource(13)), 4, 6, 2)
+	in := []float64{0.5, -0.3, 0.2, 0.8}
+
+	first := b.Forward(in)
+	second := b.Forward(in)
+
+	differ := false
+	for i := range first {
+		if first[i] != second[i] {
+			differ = true
+		}
+	}
+	if !differ {
+		t.Fatal("expected recurrent state to change the output on the second pass")
+	}
+
+	b.Reset()
+	afterReset := b.Forward(in)
+	for i := range first {
+		if first[i] != afterReset[i] {
+			t.Fatalf("Reset should restore the initial response at %d: %v vs %v", i, first[i], afterReset[i])
+		}
+	}
+}
+
+// TestCloneResetsMemory checks that offspring do not inherit the parent's memory.
+func TestCloneResetsMemory(t *testing.T) {
+	b := New(rand.New(rand.NewSource(21)), 3, 4, 2)
+	b.Forward([]float64{1, 1, 1}) // advance the parent's state
+	cp := b.Clone()
+	for i, v := range cp.State() {
+		if v != 0 {
+			t.Fatalf("clone memory[%d] = %v, want 0 (blank)", i, v)
 		}
 	}
 }
@@ -51,6 +93,7 @@ func TestCloneIsDeepAndIndependent(t *testing.T) {
 
 	// Mutating the clone must not change the original's behaviour.
 	cp.Mutate(rng, 1.0, 1.0)
+	b.Reset() // compare from the same memory state, not the advanced one
 	after := b.Forward(in)
 	for i := range before {
 		if before[i] != after[i] {
