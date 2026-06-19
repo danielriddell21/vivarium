@@ -75,15 +75,17 @@ type World struct {
 	Foods  []*Food
 	Agents []*Agent
 
-	Tick   int
-	rng    *rand.Rand
-	nextID int
+	Tick          int
+	rng           *rand.Rand
+	nextID        int
+	nextLineageID int
 
-	targetPlants int
-	rescue       bool
-	minHerb      int
-	minCarn      int
-	history      []Counts
+	targetPlants   int
+	rescue         bool
+	minHerb        int
+	minCarn        int
+	history        []Counts
+	lineageHistory []map[int]int // per sample: lineage ID -> living count
 
 	grid *spatialGrid
 }
@@ -140,6 +142,9 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 	if k == Carnivore {
 		start = startEnergyCarn
 	}
+	// A fresh agent founds its own lineage; reproduce() overrides this so children
+	// inherit their parent's lineage instead.
+	w.nextLineageID++
 	return &Agent{
 		ID:         w.nextID,
 		Kind:       k,
@@ -150,6 +155,8 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 		Brain:      brain,
 		Traits:     traits,
 		Alive:      true,
+		LineageID:  w.nextLineageID,
+		BirthTick:  w.Tick,
 		// Every agent grows its own blank forward model from scratch in life.
 		worldModel: neural.NewPredictor(BrainInputs+BrainOutputs, BrainInputs),
 	}
@@ -229,6 +236,9 @@ func (w *World) reproduce(parent *Agent) *Agent {
 	off := w.newAgent(parent.Kind, parent.Pos, brain, traits, parent.Generation+1)
 	off.Energy = child
 	off.ReproCooldown = gestation(parent.Kind) // maturation: newborns can't breed immediately
+	// Inherit the parent's lineage (newAgent assigned a fresh one by default).
+	off.LineageID = parent.LineageID
+	off.ParentID = parent.ID
 	// Place the newborn a short random offset away so it does not perfectly
 	// overlap its parent.
 	off.Pos = off.Pos.Add(geom.FromAngle(w.rng.Float64()*2*math.Pi).Scale(parent.Traits.Size)).WrapTo(w.W, w.H)
@@ -356,10 +366,26 @@ func (w *World) sampleHistory() {
 	if len(w.history) > maxHistory {
 		w.history = w.history[len(w.history)-maxHistory:]
 	}
+
+	// Per-lineage living counts, for the lineage-over-time view.
+	counts := make(map[int]int)
+	for _, a := range w.Agents {
+		if a.Alive {
+			counts[a.LineageID]++
+		}
+	}
+	w.lineageHistory = append(w.lineageHistory, counts)
+	if len(w.lineageHistory) > maxHistory {
+		w.lineageHistory = w.lineageHistory[len(w.lineageHistory)-maxHistory:]
+	}
 }
 
 // History returns the retained population-count samples (oldest first).
 func (w *World) History() []Counts { return w.history }
+
+// LineageHistory returns per-sample maps of lineage ID -> living count (oldest
+// first), for visualising how lineages rise and fall over time.
+func (w *World) LineageHistory() []map[int]int { return w.lineageHistory }
 
 // NearestAgent returns the living agent closest to pos (ignoring wrap, since this
 // is used for screen-space clicks), or nil if there are no living agents.

@@ -58,6 +58,8 @@ Controls
 	click    select the nearest agent and open its inspector panel
 	g        toggle the species view: colour agents by k-means cluster in
 	         brain-genome space and show a 2D PCA map of the population
+	l        toggle the lineage view: colour agents by lineage and show a
+	         stacked chart of lineage abundance over time
 
 Overlays
 

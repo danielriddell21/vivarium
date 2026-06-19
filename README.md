@@ -102,6 +102,7 @@ herbivore, then starve all at once. Three mechanisms damp this into coexistence:
 | `-` | halve simulation speed |
 | left click | select the nearest agent and open its inspector |
 | `g` | toggle the **species view** (genome clustering + PCA map) |
+| `l` | toggle the **lineage view** (lineage colouring + abundance-over-time chart) |
 
 The HUD shows run state and live counts, a line chart tracks plant/herbivore/
 carnivore counts over time, and the inspector shows a selected agent's energy, age,
@@ -122,6 +123,13 @@ hand-rolled in [`internal/analytics`](internal/analytics), no ML libraries):
 
 Both run read-only over the simulation on a throttle with their own RNG, so they
 never affect a run's determinism.
+
+Press `l` for the complementary **lineage view**. Every agent carries a
+`LineageID` — the founding ancestor it descends from (offspring inherit it;
+founders and rescue immigrants start new lineages). The view colours agents by
+lineage and draws a **stacked abundance-over-time chart** of the most prominent
+lineages (the rest lumped into grey "other"), so you can watch lineages arise,
+sweep, and go extinct — the *how* behind the species snapshot.
 
 ## Running
 
