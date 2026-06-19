@@ -144,15 +144,20 @@ func (g *Game) drawAnalysisPanel(screen *ebiten.Image) {
 	}
 }
 
-// agentBodyColor returns the colour to draw an agent's body in. In analysis view
-// it is the agent's species colour (grey if not yet classified); otherwise nil to
-// signal the default kind-based colour.
+// agentBodyColor returns the colour to draw an agent's body in. The lineage and
+// species views recolour agents; otherwise nil signals the default kind colour.
 func (g *Game) agentBodyColor(a *sim.Agent) color.Color {
-	if !g.analysisOn || g.analysis == nil {
-		return nil
+	if g.lineageOn && g.lineageView != nil {
+		if ci, ok := g.lineageView.colorOf[a.LineageID]; ok {
+			return lineagePalette[ci]
+		}
+		return colOther
 	}
-	if c, ok := g.analysis.clusterOf[a]; ok {
-		return clusterColor(c)
+	if g.analysisOn && g.analysis != nil {
+		if c, ok := g.analysis.clusterOf[a]; ok {
+			return clusterColor(c)
+		}
+		return color.RGBA{0x70, 0x70, 0x70, 0xff} // sampled-out / newly born
 	}
-	return color.RGBA{0x70, 0x70, 0x70, 0xff} // sampled-out / newly born
+	return nil
 }

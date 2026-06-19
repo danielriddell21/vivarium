@@ -28,6 +28,12 @@ type Game struct {
 	analysisOn   bool
 	analysis     *analysis
 	framesToScan int
+
+	// Lineage view: a stacked chart of lineage abundance over time, with agents
+	// coloured by lineage. Mutually exclusive with the species view.
+	lineageOn       bool
+	lineageView     *lineageView
+	framesToLineage int
 }
 
 // NewGame returns a Game ready to be passed to ebiten.RunGame.
@@ -64,7 +70,13 @@ func (g *Game) handleInput() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
 		g.analysisOn = !g.analysisOn
-		g.framesToScan = 0 // recompute immediately on enable
+		g.framesToScan = 0  // recompute immediately on enable
+		g.lineageOn = false // the two overlays share the same corner
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyL) {
+		g.lineageOn = !g.lineageOn
+		g.framesToLineage = 0
+		g.analysisOn = false
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
@@ -79,6 +91,13 @@ func (g *Game) handleInput() {
 			g.framesToScan = analysisRefreshFrames
 		}
 		g.framesToScan--
+	}
+	if g.lineageOn {
+		if g.framesToLineage <= 0 {
+			g.lineageView = computeLineageView(g.World)
+			g.framesToLineage = analysisRefreshFrames
+		}
+		g.framesToLineage--
 	}
 }
 

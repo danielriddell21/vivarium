@@ -21,7 +21,7 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	drawText(screen, fmt.Sprintf("plants %d", c.Plants), 12, 26, colFood)
 	drawText(screen, fmt.Sprintf("herbivores %d", c.Herbivores), 100, 26, colHerbivore)
 	drawText(screen, fmt.Sprintf("carnivores %d", c.Carnivores), 12, 42, colCarnivore)
-	drawText(screen, "space pause  +/- speed  click inspect  g species", 12, 58, colText)
+	drawText(screen, "space pause  +/- speed  click inspect  g species  l lineage", 12, 58, colText)
 }
 
 // graph geometry (bottom-left).

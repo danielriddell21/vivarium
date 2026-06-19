@@ -208,6 +208,44 @@ func TestLearningDriftsPlasticBrains(t *testing.T) {
 	}
 }
 
+// TestLineageInheritance checks founders get distinct lineages and offspring
+// inherit their parent's lineage and record their parent.
+func TestLineageInheritance(t *testing.T) {
+	w := NewWorld(rand.New(rand.NewSource(1)), testConfig())
+	a, b := w.Agents[0], w.Agents[1]
+	if a.LineageID == b.LineageID {
+		t.Fatal("distinct founders should have distinct lineages")
+	}
+	a.Energy = reproThreshold + 10
+	a.ReproCooldown = 0
+	child := w.reproduce(a)
+	if child.LineageID != a.LineageID {
+		t.Fatalf("child lineage %d should match parent %d", child.LineageID, a.LineageID)
+	}
+	if child.ParentID != a.ID {
+		t.Fatalf("child parent %d should be %d", child.ParentID, a.ID)
+	}
+}
+
+// TestLineageHistoryRecorded checks that lineage counts are sampled over time.
+func TestLineageHistoryRecorded(t *testing.T) {
+	w := NewWorld(rand.New(rand.NewSource(1)), testConfig())
+	for i := 0; i < 60; i++ {
+		w.Step()
+	}
+	hist := w.LineageHistory()
+	if len(hist) == 0 {
+		t.Fatal("expected lineage history to be recorded")
+	}
+	sum := 0
+	for _, c := range hist[len(hist)-1] {
+		sum += c
+	}
+	if sum == 0 {
+		t.Fatal("latest lineage sample should count some living agents")
+	}
+}
+
 func TestCarnivoreEatsHerbivore(t *testing.T) {
 	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0}
 	carn := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)

@@ -83,6 +83,12 @@ type Agent struct {
 	Age        int
 	Generation int
 
+	// Lineage identity: LineageID is the founding ancestor shared by all
+	// descendants; ParentID and BirthTick record genealogy for the lineage view.
+	LineageID int
+	ParentID  int
+	BirthTick int
+
 	Brain  *neural.Brain
 	Traits Traits
 	Alive  bool
