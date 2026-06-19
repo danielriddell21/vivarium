@@ -81,7 +81,7 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 
 	px := g.World.W - 230
 	py := 6.0
-	drawPanel(screen, px, py, 224, 322)
+	drawPanel(screen, px, py, 224, 340)
 
 	header := colHerbivore
 	if a.Kind == sim.Carnivore {
@@ -96,6 +96,7 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 		fmt.Sprintf("heading %.0f deg", normDeg(radToDeg(a.Heading))),
 		fmt.Sprintf("size %.1f  speed %.2f", a.Traits.Size, a.Traits.MaxSpeed),
 		fmt.Sprintf("sense %.0f  plast %.3f", a.Traits.SenseRadius, a.Traits.Plasticity),
+		fmt.Sprintf("curio %.2f  surprise %.2f", a.Traits.Curiosity, a.LastSurprise),
 		fmt.Sprintf("learned %.3f  reward %+.2f", a.Brain.LearnedDrift(), a.LastReward),
 	}
 	for _, r := range rows {

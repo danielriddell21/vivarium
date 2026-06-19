@@ -10,6 +10,7 @@ type Traits struct {
 	MaxSpeed    float64 // maximum movement speed (pixels/tick)
 	SenseRadius float64 // how far the agent can perceive food/prey/predators
 	Plasticity  float64 // in-lifetime learning rate (0 = a fixed, non-learning brain)
+	Curiosity   float64 // weight of intrinsic (novelty) reward (0 = pure forager)
 }
 
 // Trait bounds keep mutated morphologies physically sensible.
@@ -18,6 +19,7 @@ const (
 	minSpeed, maxSpeed         = 0.4, 3.5
 	minSense, maxSense         = 30.0, 220.0
 	minPlast, maxPlast         = 0.0, 0.04
+	minCurio, maxCurio         = 0.0, 1.5
 	traitMutationStdFractional = 0.12 // mutation std as a fraction of the value
 )
 
@@ -42,6 +44,7 @@ func defaultTraits(rng *rand.Rand, k Kind) Traits {
 			MaxSpeed:    clamp(jitter(2.2), minSpeed, maxSpeed),
 			SenseRadius: clamp(jitter(140), minSense, maxSense),
 			Plasticity:  clamp(jitter(0.01), minPlast, maxPlast),
+			Curiosity:   clamp(jitter(0.3), minCurio, maxCurio),
 		}
 	default: // Herbivore
 		return Traits{
@@ -49,6 +52,7 @@ func defaultTraits(rng *rand.Rand, k Kind) Traits {
 			MaxSpeed:    clamp(jitter(1.6), minSpeed, maxSpeed),
 			SenseRadius: clamp(jitter(110), minSense, maxSense),
 			Plasticity:  clamp(jitter(0.01), minPlast, maxPlast),
+			Curiosity:   clamp(jitter(0.3), minCurio, maxCurio),
 		}
 	}
 }
@@ -64,8 +68,9 @@ func (t Traits) mutated(rng *rand.Rand) Traits {
 		Size:        nudge(t.Size, minSize, maxSize),
 		MaxSpeed:    nudge(t.MaxSpeed, minSpeed, maxSpeed),
 		SenseRadius: nudge(t.SenseRadius, minSense, maxSense),
-		// Plasticity uses an absolute perturbation so a lineage can evolve learning
-		// on from zero (or back off it) rather than being stuck once it hits 0.
+		// Plasticity and Curiosity use absolute perturbations so a lineage can
+		// evolve them on from zero (or back off) rather than being stuck once at 0.
 		Plasticity: clamp(t.Plasticity+rng.NormFloat64()*0.004, minPlast, maxPlast),
+		Curiosity:  clamp(t.Curiosity+rng.NormFloat64()*0.1, minCurio, maxCurio),
 	}
 }

@@ -105,22 +105,36 @@ type Agent struct {
 	// surfaced by the inspector.
 	rewardBaseline float64
 	LastReward     float64
+
+	// Curiosity / world-model state. worldModel predicts the next senses from the
+	// current senses+action; the prediction error (LastSurprise) is the intrinsic
+	// reward. lastFeatures holds the features whose prediction is checked next tick.
+	worldModel   *neural.Predictor
+	lastFeatures []float64
+	featBuf      []float64
+	LastSurprise float64
 }
 
 // Learning rule constants.
 const (
-	rewardScale = 0.08 // squashes per-tick energy change into a bounded reward
-	baselineLR  = 0.02 // how fast the reward baseline tracks recent reward
+	rewardScale   = 0.08 // squashes per-tick energy change into a bounded reward
+	baselineLR    = 0.02 // how fast the reward baseline tracks recent reward
+	worldModelLR  = 0.03 // learning rate of the forward (world) model
+	curiosityGain = 0.6  // squashes prediction error into a bounded intrinsic reward
 )
 
-// learn turns the energy change over this tick into a reward-modulated Hebbian
-// update of the agent's brain. deltaEnergy is the net energy gained or lost this
-// tick (positive = ate, negative = spent/hurt). Learning strength is the agent's
-// evolved Plasticity trait; with Plasticity 0 this is a no-op.
+// learn turns this tick's reward into a reward-modulated Hebbian update of the
+// agent's brain. The reward combines an extrinsic term (energy gained/lost) with
+// an intrinsic curiosity term (how surprising the world was, scaled by the evolved
+// Curiosity trait). Learning strength is the evolved Plasticity trait; with
+// Plasticity 0 this is a no-op.
 func (a *Agent) learn(deltaEnergy float64) {
-	r := math.Tanh(deltaEnergy * rewardScale)
-	adv := r - a.rewardBaseline
-	a.rewardBaseline += baselineLR * (r - a.rewardBaseline)
+	extrinsic := math.Tanh(deltaEnergy * rewardScale)
+	intrinsic := a.Traits.Curiosity * math.Tanh(a.LastSurprise*curiosityGain)
+	total := extrinsic + intrinsic
+
+	adv := total - a.rewardBaseline
+	a.rewardBaseline += baselineLR * (total - a.rewardBaseline)
 	a.LastReward = adv
 	a.Brain.Learn(adv, a.Traits.Plasticity)
 }
@@ -186,12 +200,36 @@ func (a *Agent) see(w *World, p geom.Vec2, sectors []float64) {
 }
 
 // think runs the brain on the current senses and caches the I/O for inspection.
-// The brain is recurrent, so each call also advances its internal memory.
+// The brain is recurrent, so each call also advances its internal memory. It also
+// drives the curiosity world-model: the new senses are scored against last tick's
+// prediction (the surprise / intrinsic reward) and the model is trained, then a
+// fresh prediction is staged from the current senses and chosen action.
 func (a *Agent) think(w *World) []float64 {
 	in := a.sense(w)
 	out := a.Brain.Forward(in)
+
+	if a.lastFeatures != nil {
+		// Surprise of the transition predicted last tick, and an SGD step toward it.
+		a.LastSurprise = a.worldModel.Train(a.lastFeatures, in, worldModelLR)
+	}
+	a.lastFeatures = a.featureVec(in, out)
+
 	a.LastInputs, a.LastOutputs, a.LastMemory = in, out, a.Brain.State()
 	return out
+}
+
+// featureVec packs the senses and action into the world-model's input buffer
+// (reused across ticks to avoid per-tick allocation).
+func (a *Agent) featureVec(in, out []float64) []float64 {
+	f := a.featBuf
+	if cap(f) < len(in)+len(out) {
+		f = make([]float64, len(in)+len(out))
+	}
+	f = f[:len(in)+len(out)]
+	copy(f, in)
+	copy(f[len(in):], out)
+	a.featBuf = f
+	return f
 }
 
 // act applies the brain outputs: it turns, moves (paying energy), and reports

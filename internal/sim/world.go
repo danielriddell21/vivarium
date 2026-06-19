@@ -150,6 +150,8 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 		Brain:      brain,
 		Traits:     traits,
 		Alive:      true,
+		// Every agent grows its own blank forward model from scratch in life.
+		worldModel: neural.NewPredictor(BrainInputs+BrainOutputs, BrainInputs),
 	}
 }
 
