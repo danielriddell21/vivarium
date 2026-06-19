@@ -22,6 +22,12 @@ type Game struct {
 	Paused   bool
 	Speed    int        // simulation steps per frame when running
 	Selected *sim.Agent // agent shown in the inspector, or nil
+
+	// Analysis ("species") view: clusters the population in brain-genome space and
+	// projects it to 2D. Recomputed on a throttle so it stays cheap.
+	analysisOn   bool
+	analysis     *analysis
+	framesToScan int
 }
 
 // NewGame returns a Game ready to be passed to ebiten.RunGame.
@@ -56,9 +62,23 @@ func (g *Game) handleInput() {
 		g.Speed = clampInt(g.Speed/2, minSpeed, maxSpeed)
 	}
 
+	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
+		g.analysisOn = !g.analysisOn
+		g.framesToScan = 0 // recompute immediately on enable
+	}
+
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		mx, my := ebiten.CursorPosition()
 		g.Selected = g.World.NearestAgent(geom.Vec2{X: float64(mx), Y: float64(my)})
+	}
+
+	// Refresh the species analysis on a throttle while the view is on.
+	if g.analysisOn {
+		if g.framesToScan <= 0 {
+			g.analysis = computeAnalysis(g.World)
+			g.framesToScan = analysisRefreshFrames
+		}
+		g.framesToScan--
 	}
 }
 

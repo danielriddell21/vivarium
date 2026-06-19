@@ -189,6 +189,19 @@ func (b *Brain) State() []float64 {
 	return append([]float64(nil), b.state...)
 }
 
+// Genome returns a flat copy of all heritable weights (the brain's identity in
+// genome space), in a fixed order. Brains with the same layer sizes return
+// vectors of the same length, so they can be compared/clustered.
+func (b *Brain) Genome() []float64 {
+	g := make([]float64, 0, len(b.genome.WIH)+len(b.genome.WCH)+len(b.genome.BH)+len(b.genome.WHO)+len(b.genome.BO))
+	g = append(g, b.genome.WIH...)
+	g = append(g, b.genome.WCH...)
+	g = append(g, b.genome.BH...)
+	g = append(g, b.genome.WHO...)
+	g = append(g, b.genome.BO...)
+	return g
+}
+
 // LearnedDrift reports the mean absolute difference between the live weights and
 // the genome — i.e. how far in-lifetime learning has moved the phenotype away from
 // the inherited starting point. It is 0 at birth and for non-plastic agents.

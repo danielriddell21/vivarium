@@ -48,18 +48,26 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if !a.Alive {
 			continue
 		}
-		drawAgent(screen, a, a == g.Selected)
+		drawAgent(screen, a, a == g.Selected, g.agentBodyColor(a))
 	}
 
 	g.drawGraph(screen)
 	g.drawHUD(screen)
 	g.drawInspector(screen)
+	if g.analysisOn {
+		g.drawAnalysisPanel(screen)
+	}
 }
 
-func drawAgent(dst *ebiten.Image, a *sim.Agent, selected bool) {
-	body := colHerbivore
+// drawAgent renders one agent. override, when non-nil, replaces the default
+// kind-based body colour (used by the species/analysis view).
+func drawAgent(dst *ebiten.Image, a *sim.Agent, selected bool, override color.Color) {
+	var body color.Color = colHerbivore
 	if a.Kind == sim.Carnivore {
 		body = colCarnivore
+	}
+	if override != nil {
+		body = override
 	}
 	if selected {
 		// Highlight ring behind the body.
