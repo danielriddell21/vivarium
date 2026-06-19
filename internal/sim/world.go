@@ -24,6 +24,7 @@ const (
 	mutationStd   = 0.35 // std of Gaussian weight perturbation
 	historyEvery  = 6    // sample population counts every N ticks
 	maxHistory    = 1200 // cap on retained history samples
+	pruneEvery    = 120  // prune the genealogy to ancestors-of-living every N ticks
 )
 
 // gestation returns the post-reproduction cooldown for the given kind.
@@ -85,10 +86,67 @@ type World struct {
 	minHerb        int
 	minCarn        int
 	history        []Counts
-	lineageHistory []map[int]int // per sample: lineage ID -> living count
+	lineageHistory []map[int]int          // per sample: lineage ID -> living count
+	genealogy      map[int]*GenealogyNode // retained ancestry of the living population
 
 	grid *spatialGrid
 }
+
+// GenealogyNode is one agent's entry in the retained family tree. Nodes are kept
+// only while they are an ancestor of (or are) a living agent; once a whole branch
+// dies out it is pruned, so the retained set is the coalescent tree of the current
+// population.
+type GenealogyNode struct {
+	ID, ParentID int
+	BirthTick    int
+	LineageID    int
+	Kind         Kind
+}
+
+// recordBirth adds a newly created agent to the genealogy.
+func (w *World) recordBirth(a *Agent) {
+	if w.genealogy == nil {
+		w.genealogy = make(map[int]*GenealogyNode)
+	}
+	w.genealogy[a.ID] = &GenealogyNode{
+		ID: a.ID, ParentID: a.ParentID, BirthTick: a.BirthTick,
+		LineageID: a.LineageID, Kind: a.Kind,
+	}
+}
+
+// pruneGenealogy drops nodes that are neither alive nor an ancestor of a living
+// agent. Because descendants only ever appear under living nodes, a branch with no
+// living members can never regain one, so this pruning is permanent and safe.
+func (w *World) pruneGenealogy() {
+	if w.genealogy == nil {
+		return
+	}
+	relevant := make(map[int]bool, len(w.genealogy))
+	for _, a := range w.Agents {
+		if !a.Alive {
+			continue
+		}
+		for id := a.ID; id != 0; {
+			if relevant[id] {
+				break
+			}
+			n := w.genealogy[id]
+			if n == nil {
+				break
+			}
+			relevant[id] = true
+			id = n.ParentID
+		}
+	}
+	for id := range w.genealogy {
+		if !relevant[id] {
+			delete(w.genealogy, id)
+		}
+	}
+}
+
+// Genealogy returns the retained ancestry of the living population (read-only).
+func (w *World) Genealogy() map[int]*GenealogyNode { return w.genealogy }
 
 // reindex rebuilds the spatial grid from the current entity positions. It is
 // called once per tick (and after world construction) so that all neighbour
@@ -145,7 +203,7 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 	// A fresh agent founds its own lineage; reproduce() overrides this so children
 	// inherit their parent's lineage instead.
 	w.nextLineageID++
-	return &Agent{
+	a := &Agent{
 		ID:         w.nextID,
 		Kind:       k,
 		Pos:        pos,
@@ -160,6 +218,8 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 		// Every agent grows its own blank forward model from scratch in life.
 		worldModel: neural.NewPredictor(BrainInputs+BrainOutputs, BrainInputs),
 	}
+	w.recordBirth(a) // founders/immigrants record here; reproduce re-records with parent
+	return a
 }
 
 // Step advances the simulation by one tick.
@@ -197,6 +257,9 @@ func (w *World) Step() {
 	w.Tick++
 	if w.Tick%historyEvery == 0 {
 		w.sampleHistory()
+	}
+	if w.Tick%pruneEvery == 0 {
+		w.pruneGenealogy()
 	}
 }
 
@@ -239,6 +302,7 @@ func (w *World) reproduce(parent *Agent) *Agent {
 	// Inherit the parent's lineage (newAgent assigned a fresh one by default).
 	off.LineageID = parent.LineageID
 	off.ParentID = parent.ID
+	w.recordBirth(off) // re-record now that lineage and parent are set
 	// Place the newborn a short random offset away so it does not perfectly
 	// overlap its parent.
 	off.Pos = off.Pos.Add(geom.FromAngle(w.rng.Float64()*2*math.Pi).Scale(parent.Traits.Size)).WrapTo(w.W, w.H)

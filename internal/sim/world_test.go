@@ -246,6 +246,48 @@ func TestLineageHistoryRecorded(t *testing.T) {
 	}
 }
 
+// TestGenealogyRecordsAndPrunes checks that births are recorded with parent links
+// and that pruning keeps the ancestry of living agents while dropping extinct
+// branches.
+func TestGenealogyRecordsAndPrunes(t *testing.T) {
+	w := NewWorld(rand.New(rand.NewSource(1)), testConfig())
+	for i := 0; i < 80; i++ {
+		w.Step()
+	}
+	gen := w.Genealogy()
+	if len(gen) == 0 {
+		t.Fatal("expected genealogy to be populated")
+	}
+	for _, a := range w.Agents {
+		if a.Alive {
+			if _, ok := gen[a.ID]; !ok {
+				t.Fatalf("living agent %d missing from genealogy", a.ID)
+			}
+		}
+	}
+	// After a prune, every retained node must be an ancestor of (or be) a living agent.
+	w.pruneGenealogy()
+	reachable := map[int]bool{}
+	for _, a := range w.Agents {
+		if !a.Alive {
+			continue
+		}
+		for id := a.ID; id != 0; {
+			n := gen[id]
+			if n == nil {
+				break
+			}
+			reachable[id] = true
+			id = n.ParentID
+		}
+	}
+	for id := range w.Genealogy() {
+		if !reachable[id] {
+			t.Fatalf("pruned genealogy retained non-ancestor node %d", id)
+		}
+	}
+}
+
 func TestCarnivoreEatsHerbivore(t *testing.T) {
 	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0}
 	carn := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)

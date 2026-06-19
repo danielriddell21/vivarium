@@ -34,6 +34,11 @@ type Game struct {
 	lineageOn       bool
 	lineageView     *lineageView
 	framesToLineage int
+
+	// Phylogeny view: a coalescent genealogy tree of the living population.
+	phyloOn       bool
+	phylo         *phyloView
+	framesToPhylo int
 }
 
 // NewGame returns a Game ready to be passed to ebiten.RunGame.
@@ -70,13 +75,18 @@ func (g *Game) handleInput() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
 		g.analysisOn = !g.analysisOn
-		g.framesToScan = 0  // recompute immediately on enable
-		g.lineageOn = false // the two overlays share the same corner
+		g.framesToScan = 0 // recompute immediately on enable
+		g.lineageOn, g.phyloOn = false, false
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyL) {
 		g.lineageOn = !g.lineageOn
 		g.framesToLineage = 0
-		g.analysisOn = false
+		g.analysisOn, g.phyloOn = false, false
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
+		g.phyloOn = !g.phyloOn
+		g.framesToPhylo = 0
+		g.analysisOn, g.lineageOn = false, false
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
@@ -98,6 +108,13 @@ func (g *Game) handleInput() {
 			g.framesToLineage = analysisRefreshFrames
 		}
 		g.framesToLineage--
+	}
+	if g.phyloOn {
+		if g.framesToPhylo <= 0 {
+			g.phylo = computePhylogeny(g.World)
+			g.framesToPhylo = analysisRefreshFrames
+		}
+		g.framesToPhylo--
 	}
 }
 

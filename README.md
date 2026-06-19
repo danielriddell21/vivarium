@@ -103,6 +103,7 @@ herbivore, then starve all at once. Three mechanisms damp this into coexistence:
 | left click | select the nearest agent and open its inspector |
 | `g` | toggle the **species view** (genome clustering + PCA map) |
 | `l` | toggle the **lineage view** (lineage colouring + abundance-over-time chart) |
+| `p` | toggle the **phylogeny view** (coalescent genealogy tree of the living population) |
 
 The HUD shows run state and live counts, a line chart tracks plant/herbivore/
 carnivore counts over time, and the inspector shows a selected agent's energy, age,
@@ -130,6 +131,14 @@ founders and rescue immigrants start new lineages). The view colours agents by
 lineage and draws a **stacked abundance-over-time chart** of the most prominent
 lineages (the rest lumped into grey "other"), so you can watch lineages arise,
 sweep, and go extinct — the *how* behind the species snapshot.
+
+Press `p` for the **phylogeny view**. The simulation retains a genealogy of every
+birth (`parent -> child`), continuously pruned to just the ancestors of living
+agents — i.e. the **coalescent tree** of the current population. The view samples
+living agents as leaves, traces them back to their common ancestors, and draws the
+family tree as a dendrogram with **time on the x-axis** (founders left, now right),
+branches coloured by lineage — so you can see where today's population coalesces and
+which ancestral splits gave rise to it.
 
 ## Running
 
