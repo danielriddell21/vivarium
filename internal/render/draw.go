@@ -75,6 +75,20 @@ func drawAgent(dst *ebiten.Image, a *sim.Agent, selected bool, override color.Co
 	if override != nil {
 		body = override
 	}
+	// Communication halo: a faint ring whose opacity grows with how loudly the
+	// agent is broadcasting, warm for a positive signal, cool for a negative one.
+	if s := a.Signal; s > 0.15 || s < -0.15 {
+		mag := s
+		if mag < 0 {
+			mag = -mag
+		}
+		alpha := uint8(60 + 160*mag)
+		hue := color.RGBA{0xff, 0xcc, 0x55, alpha} // warm = positive
+		if s < 0 {
+			hue = color.RGBA{0x66, 0xcc, 0xff, alpha} // cool = negative
+		}
+		vector.StrokeCircle(dst, float32(a.Pos.X), float32(a.Pos.Y), float32(a.Traits.Size+4+3*mag), 1, hue, true)
+	}
 	if selected {
 		// Highlight ring behind the body.
 		vector.StrokeCircle(dst, float32(a.Pos.X), float32(a.Pos.Y), float32(a.Traits.Size+3), 2, colSelected, true)

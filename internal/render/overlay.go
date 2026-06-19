@@ -81,7 +81,7 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 
 	px := g.World.W - 230
 	py := 6.0
-	drawPanel(screen, px, py, 224, 340)
+	drawPanel(screen, px, py, 224, 396)
 
 	header := colHerbivore
 	if a.Kind == sim.Carnivore {
@@ -104,23 +104,28 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 		y += 15
 	}
 
-	// Vision: two directional bar strips (sector 0 = straight ahead). Guard
-	// against a just-spawned agent that has not sensed yet.
-	if len(a.LastInputs) >= 2*sim.VisionSectors {
+	// Vision: directional bar strips (sector 0 = straight ahead). Guard against a
+	// just-spawned agent that has not sensed yet.
+	if len(a.LastInputs) >= 3*sim.VisionSectors {
+		v := sim.VisionSectors
 		y += 6
 		drawText(screen, "vision: targets", px+8, y, colSelected)
 		y += 15
-		drawLevelBars(screen, a.LastInputs[0:sim.VisionSectors], px+8, y, 208, 16, colFood)
+		drawLevelBars(screen, a.LastInputs[0:v], px+8, y, 208, 16, colFood)
 		y += 21
 		drawText(screen, "vision: threats", px+8, y, colSelected)
 		y += 15
-		drawLevelBars(screen, a.LastInputs[sim.VisionSectors:2*sim.VisionSectors], px+8, y, 208, 16, colCarnivore)
+		drawLevelBars(screen, a.LastInputs[v:2*v], px+8, y, 208, 16, colCarnivore)
+		y += 21
+		drawText(screen, "vision: voices", px+8, y, colSelected)
+		y += 15
+		drawBars(screen, a.LastInputs[2*v:3*v], px+8, y, 208, 16) // signed: signal in [-1,1]
 		y += 21
 	}
 
 	drawText(screen, "brain outputs", px+8, y, colSelected)
 	y += 15
-	outLabels := []string{"turn", "speed", "eat"}
+	outLabels := []string{"turn", "speed", "eat", "signal"}
 	y = drawVector(screen, a.LastOutputs, outLabels, px+8, y)
 
 	y += 8

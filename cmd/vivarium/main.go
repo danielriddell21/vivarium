@@ -13,14 +13,14 @@ Model
 
 Brain
 
-	Each agent is steered by a tiny hand-rolled recurrent neural network (13
-	sensory inputs -> 10 hidden -> 3 outputs, tanh activations, no ML library).
+	Each agent is steered by a tiny hand-rolled recurrent neural network (19
+	sensory inputs -> 12 hidden -> 4 outputs, tanh activations, no ML library).
 	The hidden layer is fed its own previous activations (an Elman-style memory),
 	so behaviour can depend on the recent past rather than being a pure reflex.
 	Inputs come from directional vision: a ring of sectors around the agent, each
 	reporting the proximity of the nearest target (food/prey) and nearest threat
-	(predator) seen in that direction, plus the agent's own energy. Outputs are
-	turn, speed, and an eat decision.
+	(predator), plus the signal broadcast by the nearest same-kind neighbour, and
+	the agent's own energy. Outputs are turn, speed, an eat decision, and a signal.
 
 Evolution
 
@@ -49,6 +49,16 @@ Curiosity
 	the evolved Curiosity trait, to the reward above — an intrinsic motivation to
 	seek novel, not-yet-predictable situations. As the model learns a region the
 	surprise there fades, so curiosity moves on from the familiar.
+
+Communication
+
+	Every agent broadcasts a scalar signal (its 4th output) that same-kind
+	neighbours hear through a "voice" vision channel (the nearest conspecific's
+	signal per sector). Signals are double-buffered so all agents hear the previous
+	tick's broadcast regardless of update order. Nothing rewards signalling
+	directly, but because the channel feeds the evolving, learning brains, uses
+	like alarm calls, flocking, or coordinated movement can emerge. Active
+	broadcasts show in-world as a faint halo (warm = positive, cool = negative).
 
 Controls
 
