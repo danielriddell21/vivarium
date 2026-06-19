@@ -75,7 +75,7 @@ func (g *Game) handleInput() {
 	// Refresh the species analysis on a throttle while the view is on.
 	if g.analysisOn {
 		if g.framesToScan <= 0 {
-			g.analysis = computeAnalysis(g.World)
+			g.analysis = computeAnalysis(g.World, g.analysis)
 			g.framesToScan = analysisRefreshFrames
 		}
 		g.framesToScan--
