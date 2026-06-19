@@ -23,8 +23,8 @@ over time toward a cap.
 
 ## The brain
 
-Each agent's behaviour comes from a recurrent neural net (13 inputs → 10 hidden →
-3 outputs, `tanh` activations), implemented from scratch with flat `float64`
+Each agent's behaviour comes from a recurrent neural net (19 inputs → 12 hidden →
+4 outputs, `tanh` activations), implemented from scratch with flat `float64`
 slices — no ML libraries. The hidden layer feeds its previous activations back in
 (an Elman-style memory), so an agent can act on the recent past — keep fleeing for
 a moment after a predator drops out of range, wander, etc. — rather than reacting
@@ -32,12 +32,12 @@ to the current senses alone. Offspring inherit the weights but start with a blan
 memory.
 
 **Inputs:** directional **vision** — a ring of 6 sectors around the agent (sector 0
-points straight ahead), each reporting the proximity of the nearest *target* (food
-for herbivores, prey for carnivores) and nearest *threat* (a predator) seen in that
-direction — plus the agent's own normalised energy. Two channels × 6 sectors + 1 =
-13 inputs. The proximity values double as the raycast-style distance sensors.
+points straight ahead), each carrying the proximity of the nearest *target* (food
+for herbivores, prey for carnivores), the nearest *threat* (a predator), and the
+*voice* (signal) of the nearest same-kind neighbour — plus the agent's own
+normalised energy. Three channels × 6 sectors + 1 = 19 inputs.
 
-**Outputs:** turn, speed, and an eat/act decision.
+**Outputs:** turn, speed, an eat/act decision, and a broadcast signal.
 
 ## Evolution
 
@@ -78,7 +78,21 @@ than only chasing energy. Because the model keeps learning, surprise in a
 well-explored region fades and curiosity moves on — the standard intrinsic-reward
 dynamic. The inspector shows each agent's `curio` (trait) and live `surprise`.
 
-### Population stability
+### Communication
+
+Every agent **broadcasts a scalar signal** (its 4th brain output), and hears the
+signal of the nearest same-kind neighbour in each vision sector through a third
+"voice" channel. Signals are **double-buffered** — promoted together at the end of
+each tick — so every agent hears the *previous* tick's broadcast regardless of
+update order, keeping the channel order-independent and deterministic.
+
+Nothing rewards signalling on its own; the channel is just wired into the evolving,
+learning brains, so communicative strategies (alarm calls, flocking, coordinated
+movement) can *emerge* if they pay off. Active broadcasts are visible in-world as a
+faint **halo** — warm for a positive signal, cool for a negative one — and the
+inspector shows the incoming `voices` channel and the agent's own `signal` output.
+
+## Population stability
 
 Naïve predator–prey agent worlds tend to collapse: carnivores overshoot, eat every
 herbivore, then starve all at once. Three mechanisms damp this into coexistence:

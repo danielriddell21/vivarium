@@ -27,31 +27,34 @@ func (k Kind) String() string {
 //
 // Vision is a ring of VisionSectors equal-angle sectors covering the full 360°
 // around the agent, oriented relative to its heading (sector 0 points straight
-// ahead, sectors proceed counter-clockwise). Each sector reports the proximity
-// (0 = nothing/at the sense-radius edge, 1 = adjacent) of the nearest thing it
-// sees, on two channels:
+// ahead, sectors proceed counter-clockwise). Each sector reports a value for the
+// nearest thing it sees, on three channels:
 //
-//	target channel — what the agent eats (plants for herbivores, herbivores for
-//	                 carnivores)
-//	threat channel — what eats it (carnivores for herbivores; always empty for
-//	                 carnivores, which are apex predators)
+//	target channel — proximity of what the agent eats (plants for herbivores,
+//	                 herbivores for carnivores)
+//	threat channel — proximity of what eats it (carnivores for herbivores; always
+//	                 empty for carnivores, which are apex predators)
+//	voice channel  — the signal (-1..1) currently broadcast by the nearest
+//	                 same-kind neighbour, i.e. communication between conspecifics
 //
-// Inputs are laid out as:
+// Proximity is 0 (nothing / at the sense-radius edge) to 1 (adjacent). Inputs:
 //
-//	[0 .. VisionSectors)               target-channel proximity per sector
-//	[VisionSectors .. 2*VisionSectors) threat-channel proximity per sector
-//	[2*VisionSectors]                  own energy (normalised, ~0..1)
+//	[0 .. V)     target-channel proximity per sector
+//	[V .. 2V)    threat-channel proximity per sector
+//	[2V .. 3V)   voice-channel signal per sector   (V = VisionSectors)
+//	[3V]         own energy (normalised, ~0..1)
 //
 // Outputs:
 //
 //	0: turn   (-1..1, scaled to a max turn per tick)
 //	1: speed  (-1..1, mapped to 0..MaxSpeed)
 //	2: eat    (>0 means attempt to feed this tick)
+//	3: signal (-1..1, broadcast to nearby conspecifics next tick)
 const (
 	VisionSectors = 6
-	BrainInputs   = VisionSectors*2 + 1
-	BrainHidden   = 10
-	BrainOutputs  = 3
+	BrainInputs   = VisionSectors*3 + 1
+	BrainHidden   = 12
+	BrainOutputs  = 4
 )
 
 // Metabolism. Carnivores have ~3x the upkeep of herbivores, so when prey is
@@ -92,6 +95,14 @@ type Agent struct {
 	Brain  *neural.Brain
 	Traits Traits
 	Alive  bool
+
+	// Signal is the value this agent currently broadcasts to nearby conspecifics
+	// (set from the brain's signal output). pendingSignal holds the value computed
+	// this tick; it is promoted to Signal only after every agent has sensed, so all
+	// agents hear the previous tick's signals (a consistent, order-independent
+	// broadcast).
+	Signal        float64
+	pendingSignal float64
 
 	// ReproCooldown is a gestation/maturation timer: an agent can only
 	// reproduce when it reaches zero. It prevents a predator from converting one
@@ -152,34 +163,45 @@ func (a *Agent) learn(deltaEnergy float64) {
 // density rather than total population. See the input-layout comment above.
 func (a *Agent) sense(w *World) []float64 {
 	in := make([]float64, BrainInputs)
-	in[2*VisionSectors] = clamp(a.Energy/reproThreshold, 0, 1.5)
+	in[3*VisionSectors] = clamp(a.Energy/reproThreshold, 0, 1.5)
 
 	// These sub-slices share backing storage with in, so writing to them fills
 	// the corresponding input ranges directly.
 	target := in[0:VisionSectors]
 	threat := in[VisionSectors : 2*VisionSectors]
+	voice := in[2*VisionSectors : 3*VisionSectors]
 	r := a.Traits.SenseRadius
 
-	switch a.Kind {
-	case Herbivore:
+	// voiceDist tracks the nearest conspecific per sector so voice carries the
+	// closest neighbour's signal rather than an arbitrary one.
+	var voiceDist [VisionSectors]float64
+	for i := range voiceDist {
+		voiceDist[i] = math.Inf(1)
+	}
+
+	// Herbivores forage on plants (the carnivore target channel is filled below).
+	if a.Kind == Herbivore {
 		w.grid.forEachFoodNear(a.Pos, r, func(f *Food) {
 			if f.Ripe() {
 				a.see(w, f.Pos, target)
 			}
 		})
-		w.grid.forEachAgentNear(a.Pos, r, func(o *Agent) {
-			if o.Alive && o.Kind == Carnivore && o.ID != a.ID {
-				a.see(w, o.Pos, threat)
-			}
-		})
-	case Carnivore:
-		w.grid.forEachAgentNear(a.Pos, r, func(o *Agent) {
-			if o.Alive && o.Kind == Herbivore && o.ID != a.ID {
-				a.see(w, o.Pos, target)
-			}
-		})
-		// Carnivores are apex predators here: no threat channel.
 	}
+
+	w.grid.forEachAgentNear(a.Pos, r, func(o *Agent) {
+		if !o.Alive || o.ID == a.ID {
+			return
+		}
+		switch {
+		case a.Kind == Herbivore && o.Kind == Carnivore:
+			a.see(w, o.Pos, threat) // predators
+		case a.Kind == Carnivore && o.Kind == Herbivore:
+			a.see(w, o.Pos, target) // prey
+		}
+		if o.Kind == a.Kind {
+			a.hear(w, o, voice, voiceDist[:]) // conspecific broadcast
+		}
+	})
 	return in
 }
 
@@ -192,6 +214,30 @@ func (a *Agent) see(w *World, p geom.Vec2, sectors []float64) {
 	if dist == 0 || dist > a.Traits.SenseRadius {
 		return
 	}
+	sec := a.sectorOf(d)
+	if prox := 1 - dist/a.Traits.SenseRadius; prox > sectors[sec] {
+		sectors[sec] = prox
+	}
+}
+
+// hear records the signal broadcast by conspecific o into the voice channel,
+// keeping the nearest neighbour's signal per sector.
+func (a *Agent) hear(w *World, o *Agent, voice, voiceDist []float64) {
+	d := a.Pos.ShortestDelta(o.Pos, w.W, w.H)
+	dist := d.Len()
+	if dist == 0 || dist > a.Traits.SenseRadius {
+		return
+	}
+	sec := a.sectorOf(d)
+	if dist < voiceDist[sec] {
+		voiceDist[sec] = dist
+		voice[sec] = o.Signal
+	}
+}
+
+// sectorOf returns the vision sector that the delta vector d falls in, relative to
+// the agent's heading.
+func (a *Agent) sectorOf(d geom.Vec2) int {
 	rel := math.Mod(d.Angle()-a.Heading, 2*math.Pi)
 	if rel < 0 {
 		rel += 2 * math.Pi
@@ -200,9 +246,7 @@ func (a *Agent) see(w *World, p geom.Vec2, sectors []float64) {
 	if sec >= VisionSectors { // guard the boundary case rel ≈ 2π
 		sec = VisionSectors - 1
 	}
-	if prox := 1 - dist/a.Traits.SenseRadius; prox > sectors[sec] {
-		sectors[sec] = prox
-	}
+	return sec
 }
 
 // think runs the brain on the current senses and caches the I/O for inspection.
@@ -219,6 +263,10 @@ func (a *Agent) think(w *World) []float64 {
 		a.LastSurprise = a.worldModel.Train(a.lastFeatures, in, worldModelLR)
 	}
 	a.lastFeatures = a.featureVec(in, out)
+
+	// Stage this tick's broadcast; it becomes visible to others next tick (see
+	// World.Step), so all agents hear a consistent previous-tick signal.
+	a.pendingSignal = out[3]
 
 	a.LastInputs, a.LastOutputs, a.LastMemory = in, out, a.Brain.State()
 	return out

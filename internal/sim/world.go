@@ -250,6 +250,11 @@ func (w *World) Step() {
 		}
 	}
 	w.Agents = append(w.Agents, newborns...)
+	// Promote this tick's broadcasts together so every agent hears the same
+	// (previous-tick) signals during sensing, regardless of update order.
+	for _, a := range w.Agents {
+		a.Signal = a.pendingSignal
+	}
 	w.compactDead()
 	w.maintainFood()
 	w.maintainPopulations()

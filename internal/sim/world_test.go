@@ -171,13 +171,39 @@ func TestVisionSectors(t *testing.T) {
 	if in[VisionSectors+3] <= 0 {
 		t.Fatalf("predator due behind should light threat sector 3, got %v", in[VisionSectors+3])
 	}
-	if in[2*VisionSectors] <= 0 {
+	if in[2*VisionSectors] != 0 {
+		t.Fatalf("voice sector should be empty with no conspecific, got %v", in[2*VisionSectors])
+	}
+	if in[3*VisionSectors] <= 0 {
 		t.Fatal("energy input should be set")
 	}
 	for s := 1; s < VisionSectors; s++ {
 		if in[s] != 0 {
 			t.Fatalf("unexpected target proximity in sector %d: %v", s, in[s])
 		}
+	}
+}
+
+// TestVoiceChannel checks an agent hears a same-kind neighbour's broadcast signal
+// in the correct sector, and does not hear other species.
+func TestVoiceChannel(t *testing.T) {
+	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1))}
+	herb := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
+	herb.Heading = 0
+	herb.Traits.SenseRadius = 200
+	mate := w.newAgent(Herbivore, geom2(140, 100), nil, Traits{}, 0) // due east, sector 0
+	mate.Signal = 0.75
+	carn := w.newAgent(Carnivore, geom2(60, 60), nil, Traits{}, 0) // sector 3, different kind
+	carn.Signal = -0.9
+	w.Agents = []*Agent{herb, mate, carn}
+	w.reindex()
+
+	in := herb.sense(w)
+	if got := in[2*VisionSectors+0]; got != 0.75 {
+		t.Fatalf("voice sector 0 should carry mate's signal 0.75, got %v", got)
+	}
+	if got := in[2*VisionSectors+3]; got != 0 {
+		t.Fatalf("carnivore signal must not leak into a herbivore's voice channel, got %v", got)
 	}
 }
 
