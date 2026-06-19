@@ -10,11 +10,17 @@ import (
 	"math/rand"
 )
 
-// KMeans partitions pts into k clusters with Lloyd's algorithm and k-means++
-// seeding. It returns, for each point, the index of its assigned cluster, plus the
-// final centroids. All points must share the same dimensionality. If there are
-// fewer points than k, each point becomes its own cluster.
-func KMeans(pts [][]float64, k, iters int, rng *rand.Rand) (assign []int, centroids [][]float64) {
+// KMeans partitions pts into k clusters with Lloyd's algorithm. It returns, for
+// each point, the index of its assigned cluster, plus the final centroids. All
+// points must share the same dimensionality. If there are fewer points than k,
+// each point becomes its own cluster.
+//
+// init optionally supplies starting centroids (a "warm start"). When it has
+// exactly k centroids of the right dimension they are used as-is; otherwise the
+// clusters are seeded with k-means++. Warm-starting from the previous result keeps
+// cluster *labels* stable across repeated calls on slowly-changing data, so a
+// caller colouring by cluster index doesn't see labels permute every refresh.
+func KMeans(pts [][]float64, k, iters int, rng *rand.Rand, init [][]float64) (assign []int, centroids [][]float64) {
 	n := len(pts)
 	assign = make([]int, n)
 	if n == 0 || k <= 0 {
@@ -24,7 +30,14 @@ func KMeans(pts [][]float64, k, iters int, rng *rand.Rand) (assign []int, centro
 		k = n
 	}
 
-	centroids = seedPlusPlus(pts, k, rng)
+	if validCentroids(init, k, len(pts[0])) {
+		centroids = make([][]float64, k)
+		for c := range init {
+			centroids[c] = append([]float64(nil), init[c]...)
+		}
+	} else {
+		centroids = seedPlusPlus(pts, k, rng)
+	}
 	for it := 0; it < iters; it++ {
 		changed := false
 		// Assignment step: nearest centroid.
@@ -110,6 +123,20 @@ func seedPlusPlus(pts [][]float64, k int, rng *rand.Rand) [][]float64 {
 		centroids = append(centroids, append([]float64(nil), pts[idx]...))
 	}
 	return centroids
+}
+
+// validCentroids reports whether c is a usable warm-start: exactly k centroids,
+// each of dimension dim.
+func validCentroids(c [][]float64, k, dim int) bool {
+	if len(c) != k {
+		return false
+	}
+	for _, cen := range c {
+		if len(cen) != dim {
+			return false
+		}
+	}
+	return true
 }
 
 func sqDist(a, b []float64) float64 {

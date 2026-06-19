@@ -36,6 +36,7 @@ type analysis struct {
 	sizes                  []int
 	clusterOf              map[*sim.Agent]int
 	coords                 map[*sim.Agent][2]float64
+	centroids              [][]float64 // kept to warm-start the next pass (stable labels)
 	pcaOK                  bool
 	minX, maxX, minY, maxY float64
 	sampled, total         int
@@ -43,8 +44,10 @@ type analysis struct {
 
 // computeAnalysis clusters the living population in brain-genome space and projects
 // it to 2D. It is read-only over the simulation and uses its own RNG, so it never
-// affects the run's determinism.
-func computeAnalysis(w *sim.World) *analysis {
+// affects the run's determinism. prev is the previous result (or nil); its
+// centroids warm-start k-means so cluster labels — and therefore the colours —
+// stay attached to the same groups across refreshes instead of flashing.
+func computeAnalysis(w *sim.World, prev *analysis) *analysis {
 	// Collect living agents, sampling with a stride if the population is large.
 	var agents []*sim.Agent
 	for _, a := range w.Agents {
@@ -72,7 +75,11 @@ func computeAnalysis(w *sim.World) *analysis {
 	if k > len(sample) {
 		k = len(sample)
 	}
-	assign, _ := analytics.KMeans(feats, k, kmeansIters, rng)
+	var warm [][]float64
+	if prev != nil {
+		warm = prev.centroids // reused only if it has the right shape (k x dim)
+	}
+	assign, centroids := analytics.KMeans(feats, k, kmeansIters, rng, warm)
 	coords, ok := analytics.Project2D(feats, rand.New(rand.NewSource(2)))
 
 	res := &analysis{
@@ -80,6 +87,7 @@ func computeAnalysis(w *sim.World) *analysis {
 		sizes:     make([]int, k),
 		clusterOf: make(map[*sim.Agent]int, len(sample)),
 		coords:    make(map[*sim.Agent][2]float64, len(sample)),
+		centroids: centroids,
 		pcaOK:     ok,
 		total:     total,
 		sampled:   len(sample),
