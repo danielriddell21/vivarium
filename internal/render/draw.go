@@ -60,6 +60,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.lineageOn {
 		g.drawLineagePanel(screen)
 	}
+	if g.phyloOn {
+		g.drawPhylogenyPanel(screen)
+	}
 }
 
 // drawAgent renders one agent. override, when non-nil, replaces the default
