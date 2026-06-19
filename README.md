@@ -101,10 +101,27 @@ herbivore, then starve all at once. Three mechanisms damp this into coexistence:
 | `+` or `=` | double simulation speed |
 | `-` | halve simulation speed |
 | left click | select the nearest agent and open its inspector |
+| `g` | toggle the **species view** (genome clustering + PCA map) |
 
 The HUD shows run state and live counts, a line chart tracks plant/herbivore/
 carnivore counts over time, and the inspector shows a selected agent's energy, age,
 generation, traits, and current neural inputs/outputs.
+
+## Species analytics
+
+Press `g` to toggle a built-in machine-learning view of the population (all
+hand-rolled in [`internal/analytics`](internal/analytics), no ML libraries):
+
+- **k-means clustering** groups agents into emergent "species" by their
+  brain-**genome** vector. Successful lineages — whose descendants share nearly the
+  same genome — form tight clusters, so the clustering effectively discovers them.
+- Agents in the world are recoloured by their species, and a panel shows each
+  cluster's size plus a **2D PCA projection** of genome-space (top two principal
+  components, found by power iteration), so you can *see* the population spread out
+  and speciate.
+
+Both run read-only over the simulation on a throttle with their own RNG, so they
+never affect a run's determinism.
 
 ## Running
 
@@ -133,15 +150,16 @@ reproduces the same run exactly.
 ## Layout
 
 ```
-cmd/vivarium      entry point: flags, seeding, window setup
-internal/geom     2D vectors + toroidal math
-internal/neural   hand-rolled feedforward brain (+ tests)
-internal/sim      World, Agent, Food, Traits, evolution (+ tests)
-internal/render   Ebiten game loop, drawing, overlays, input
+cmd/vivarium        entry point: flags, seeding, window setup
+internal/geom       2D vectors + toroidal math
+internal/neural     hand-rolled recurrent brain + world-model (+ tests)
+internal/sim        World, Agent, Food, Traits, evolution + learning (+ tests)
+internal/analytics  hand-rolled k-means + PCA for the species view (+ tests)
+internal/render     Ebiten game loop, drawing, overlays, input
 ```
 
-The `geom`, `neural`, and `sim` packages are pure Go with no Ebiten dependency, so
-the simulation core is unit-testable headlessly: `go test ./internal/...`.
+The `geom`, `neural`, `sim`, and `analytics` packages are pure Go with no Ebiten
+dependency, so the simulation core is unit-testable headlessly: `go test ./internal/...`.
 
 ## Related work
 
