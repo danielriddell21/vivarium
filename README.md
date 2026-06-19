@@ -66,6 +66,18 @@ the ability to learn being selected for. The inspector shows each agent's
 `plasticity`, its current `reward`, and `learned` (how far lifetime learning has
 moved its weights from the inherited genome).
 
+## Curiosity
+
+Reward isn't only about food. Each agent also trains a small **forward (world)
+model** — a linear predictor learned online by **gradient descent** — that predicts
+its *next* senses from its current senses and chosen action. The model's prediction
+error is the **surprise** of a transition, and it's added (scaled by the evolved
+**`Curiosity`** trait) to the reward that drives learning. The effect is *intrinsic
+motivation*: agents are nudged toward novel, not-yet-predictable situations rather
+than only chasing energy. Because the model keeps learning, surprise in a
+well-explored region fades and curiosity moves on — the standard intrinsic-reward
+dynamic. The inspector shows each agent's `curio` (trait) and live `surprise`.
+
 ### Population stability
 
 Naïve predator–prey agent worlds tend to collapse: carnivores overshoot, eat every

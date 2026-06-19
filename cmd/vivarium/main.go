@@ -41,6 +41,15 @@ In-lifetime learning
 	not what a parent learned, so each individual must learn anew — letting learning
 	and evolution be studied separately.
 
+Curiosity
+
+	Each agent also learns a small forward (world) model that predicts its next
+	senses from its current senses and action, trained online by gradient descent.
+	The prediction error is the "surprise" of a transition and is added, scaled by
+	the evolved Curiosity trait, to the reward above — an intrinsic motivation to
+	seek novel, not-yet-predictable situations. As the model learns a region the
+	surprise there fades, so curiosity moves on from the familiar.
+
 Controls
 
 	space    pause / resume
