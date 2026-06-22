@@ -84,3 +84,33 @@ func TestDietAffectsEnergyGain(t *testing.T) {
 		t.Fatalf("opposite food should yield ~0 energy for a pure specialist, got %v", mismatched)
 	}
 }
+
+// TestDayNightShrinksVision checks an agent perceives a distant neighbour by day
+// but not at night, when effective vision contracts.
+func TestDayNightShrinksVision(t *testing.T) {
+	build := func(tick int) []float64 {
+		w := &World{W: 1000, H: 1000, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
+		w.Tick = tick
+		a := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)
+		a.Heading = 0
+		a.Traits.SenseRadius = 200
+		prey := w.newAgent(Herbivore, geom2(290, 100), nil, Traits{}, 0) // 190 away, east
+		w.Agents = []*Agent{a, prey}
+		w.reindex()
+		return a.sense(w)
+	}
+	noon := build(300)     // quarter cycle: full daylight
+	midnight := build(900) // three-quarter cycle: darkest
+	if noon[0] <= 0 {
+		t.Fatal("prey within day vision should light target sector 0")
+	}
+	if midnight[0] != 0 {
+		t.Fatalf("prey beyond night vision should be invisible, got %v", midnight[0])
+	}
+	// Light is brighter at noon than midnight.
+	wn := &World{params: DefaultParams(), Tick: 300}
+	wm := &World{params: DefaultParams(), Tick: 900}
+	if wn.LightFactor() <= wm.LightFactor() {
+		t.Fatal("noon should be brighter than midnight")
+	}
+}
