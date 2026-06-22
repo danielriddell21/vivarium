@@ -277,7 +277,8 @@ func (a *Agent) act(w *World, out []float64) (wantsEat bool) {
 	if speed < 0 {
 		speed = 0
 	}
-	a.Pos = a.Pos.Add(geom.FromAngle(a.Heading).Scale(speed)).WrapTo(w.W, w.H)
+	proposed := a.Pos.Add(geom.FromAngle(a.Heading).Scale(speed)).WrapTo(w.W, w.H)
+	a.Pos = w.resolveMove(a.Pos, proposed, a.Traits.Size)
 
 	a.Energy -= a.basalCost(w) + w.params.MoveCost*speed
 	if a.Energy > w.params.MaxEnergy {

@@ -5,6 +5,7 @@
   "herbivores": 80,
   "carnivores": 8,
   "targetPlants": 260,
+  "obstacles": 14,
   "rescue": true,
   "minHerbivores": 8,
   "minCarnivores": 4,

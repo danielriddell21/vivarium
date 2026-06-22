@@ -21,6 +21,7 @@ var (
 	colSelected   = color.RGBA{0xff, 0xe0, 0x4f, 0xff}
 	colText       = color.RGBA{0xe6, 0xe6, 0xe6, 0xff}
 	colPanel      = color.RGBA{0x00, 0x00, 0x00, 0xc0}
+	colObstacle   = color.RGBA{0x33, 0x37, 0x3b, 0xff}
 )
 
 // face is a shared bitmap font for all overlay text (no external font files).
@@ -36,6 +37,10 @@ var whiteImage = func() *ebiten.Image {
 // Draw renders one frame: world first, then overlays.
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(colBackground)
+
+	for _, o := range g.World.Obstacles() {
+		vector.DrawFilledCircle(screen, float32(o.Pos.X), float32(o.Pos.Y), float32(o.Radius), colObstacle, true)
+	}
 
 	for _, f := range g.World.Foods {
 		if !g.World.FoodRipe(f) {

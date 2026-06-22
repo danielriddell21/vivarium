@@ -26,6 +26,7 @@ type Config struct {
 	Carnivores int `json:"carnivores"`
 
 	TargetPlants int `json:"targetPlants"` // plant count the world tries to maintain
+	Obstacles    int `json:"obstacles"`    // number of impassable terrain rocks
 
 	// Rescue enables a metapopulation "rescue effect": when a mobile tier drops
 	// below its floor, occasional immigrants arrive so the ecosystem recovers
@@ -44,6 +45,7 @@ func DefaultConfig() Config {
 		Width: 960, Height: 720,
 		Plants: 200, Herbivores: 80, Carnivores: 8,
 		TargetPlants:  260,
+		Obstacles:     14,
 		Rescue:        true,
 		MinHerbivores: 8,
 		MinCarnivores: 4,
@@ -77,8 +79,9 @@ type World struct {
 	lineageHistory []map[int]int          // per sample: lineage ID -> living count
 	genealogy      map[int]*GenealogyNode // retained ancestry of the living population
 
-	grid   *spatialGrid
-	active []*Agent // reused scratch: agents alive at the start of a tick
+	grid      *spatialGrid
+	active    []*Agent // reused scratch: agents alive at the start of a tick
+	obstacles []Obstacle
 }
 
 // GenealogyNode is one agent's entry in the retained family tree. Nodes are kept
@@ -158,6 +161,12 @@ func NewWorld(rng *rand.Rand, cfg Config) *World {
 		rescue:       cfg.Rescue,
 		minHerb:      cfg.MinHerbivores,
 		minCarn:      cfg.MinCarnivores,
+	}
+	for i := 0; i < cfg.Obstacles; i++ {
+		w.obstacles = append(w.obstacles, Obstacle{
+			Pos:    w.randPos(),
+			Radius: obstacleMinR + rng.Float64()*(obstacleMaxR-obstacleMinR),
+		})
 	}
 	for i := 0; i < cfg.Plants; i++ {
 		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodMaxEnergy * rng.Float64()})
