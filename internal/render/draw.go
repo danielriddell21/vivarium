@@ -38,7 +38,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(colBackground)
 
 	for _, f := range g.World.Foods {
-		if !f.Ripe() {
+		if !g.World.FoodRipe(f) {
 			continue
 		}
 		vector.DrawFilledCircle(screen, float32(f.Pos.X), float32(f.Pos.Y), 2, colFood, false)

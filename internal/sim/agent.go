@@ -57,23 +57,12 @@ const (
 	BrainOutputs  = 4
 )
 
-// Metabolism. Carnivores have ~3x the upkeep of herbivores, so when prey is
-// scarce they starve quickly. This predator self-limitation is what damps the
-// boom-bust collapse into coexistence.
-const (
-	maxTurnPerTick = 0.45  // radians
-	herbBasalCost  = 0.06  // herbivore upkeep per tick
-	carnBasalCost  = 0.20  // carnivore upkeep per tick
-	moveCost       = 0.04  // additional energy lost per unit of speed
-	maxEnergy      = 200.0 // hard cap so a big meal can't be hoarded into many births
-)
-
-// basalCost returns the per-tick upkeep for the agent's kind.
-func (a *Agent) basalCost() float64 {
+// basalCost returns the per-tick upkeep for the agent's kind (a tunable Param).
+func (a *Agent) basalCost(w *World) float64 {
 	if a.Kind == Carnivore {
-		return carnBasalCost
+		return w.params.CarnBasalCost
 	}
-	return herbBasalCost
+	return w.params.HerbBasalCost
 }
 
 // Agent is a mobile organism driven by an evolved neural brain.
@@ -132,26 +121,18 @@ type Agent struct {
 	LastSurprise float64
 }
 
-// Learning rule constants.
-const (
-	rewardScale   = 0.08 // squashes per-tick energy change into a bounded reward
-	baselineLR    = 0.02 // how fast the reward baseline tracks recent reward
-	worldModelLR  = 0.03 // learning rate of the forward (world) model
-	curiosityGain = 0.6  // squashes prediction error into a bounded intrinsic reward
-)
-
 // learn turns this tick's reward into a reward-modulated Hebbian update of the
 // agent's brain. The reward combines an extrinsic term (energy gained/lost) with
 // an intrinsic curiosity term (how surprising the world was, scaled by the evolved
 // Curiosity trait). Learning strength is the evolved Plasticity trait; with
 // Plasticity 0 this is a no-op.
-func (a *Agent) learn(deltaEnergy float64) {
-	extrinsic := math.Tanh(deltaEnergy * rewardScale)
-	intrinsic := a.Traits.Curiosity * math.Tanh(a.LastSurprise*curiosityGain)
+func (a *Agent) learn(w *World, deltaEnergy float64) {
+	extrinsic := math.Tanh(deltaEnergy * w.params.RewardScale)
+	intrinsic := a.Traits.Curiosity * math.Tanh(a.LastSurprise*w.params.CuriosityGain)
 	total := extrinsic + intrinsic
 
 	adv := total - a.rewardBaseline
-	a.rewardBaseline += baselineLR * (total - a.rewardBaseline)
+	a.rewardBaseline += w.params.BaselineLR * (total - a.rewardBaseline)
 	a.LastReward = adv
 	a.Brain.Learn(adv, a.Traits.Plasticity)
 }
@@ -163,7 +144,7 @@ func (a *Agent) learn(deltaEnergy float64) {
 // density rather than total population. See the input-layout comment above.
 func (a *Agent) sense(w *World) []float64 {
 	in := make([]float64, BrainInputs)
-	in[3*VisionSectors] = clamp(a.Energy/reproThreshold, 0, 1.5)
+	in[3*VisionSectors] = clamp(a.Energy/w.params.ReproThreshold, 0, 1.5)
 
 	// These sub-slices share backing storage with in, so writing to them fills
 	// the corresponding input ranges directly.
@@ -182,7 +163,7 @@ func (a *Agent) sense(w *World) []float64 {
 	// Herbivores forage on plants (the carnivore target channel is filled below).
 	if a.Kind == Herbivore {
 		w.grid.forEachFoodNear(a.Pos, r, func(f *Food) {
-			if f.Ripe() {
+			if w.foodRipe(f) {
 				a.see(w, f.Pos, target)
 			}
 		})
@@ -260,7 +241,7 @@ func (a *Agent) think(w *World) []float64 {
 
 	if a.lastFeatures != nil {
 		// Surprise of the transition predicted last tick, and an SGD step toward it.
-		a.LastSurprise = a.worldModel.Train(a.lastFeatures, in, worldModelLR)
+		a.LastSurprise = a.worldModel.Train(a.lastFeatures, in, w.params.WorldModelLR)
 	}
 	a.lastFeatures = a.featureVec(in, out)
 
@@ -289,7 +270,7 @@ func (a *Agent) featureVec(in, out []float64) []float64 {
 // act applies the brain outputs: it turns, moves (paying energy), and reports
 // whether the agent wants to eat this tick.
 func (a *Agent) act(w *World, out []float64) (wantsEat bool) {
-	a.Heading += out[0] * maxTurnPerTick
+	a.Heading += out[0] * w.params.MaxTurn
 	a.Heading = math.Mod(a.Heading, 2*math.Pi)
 
 	speed := (out[1] + 1) / 2 * a.Traits.MaxSpeed
@@ -298,9 +279,9 @@ func (a *Agent) act(w *World, out []float64) (wantsEat bool) {
 	}
 	a.Pos = a.Pos.Add(geom.FromAngle(a.Heading).Scale(speed)).WrapTo(w.W, w.H)
 
-	a.Energy -= a.basalCost() + moveCost*speed
-	if a.Energy > maxEnergy {
-		a.Energy = maxEnergy
+	a.Energy -= a.basalCost(w) + w.params.MoveCost*speed
+	if a.Energy > w.params.MaxEnergy {
+		a.Energy = w.params.MaxEnergy
 	}
 	if a.ReproCooldown > 0 {
 		a.ReproCooldown--

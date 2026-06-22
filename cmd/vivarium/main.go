@@ -88,9 +88,11 @@ Reproducibility
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"math/rand"
+	"os"
 
 	"github.com/danielriddell21/vivarium/internal/render"
 	"github.com/danielriddell21/vivarium/internal/sim"
@@ -106,11 +108,45 @@ func main() {
 	herbivores := flag.Int("herbivores", cfg.Herbivores, "initial herbivore count")
 	carnivores := flag.Int("carnivores", cfg.Carnivores, "initial carnivore count")
 	rescue := flag.Bool("rescue", cfg.Rescue, "rescue effect: immigrants arrive when a tier nears extinction")
+	configPath := flag.String("config", "", "path to a JSON config file overriding defaults (see -print-config)")
+	printConfig := flag.Bool("print-config", false, "print the default config as JSON and exit")
 	flag.Parse()
 
-	cfg.Width, cfg.Height = *width, *height
-	cfg.Plants, cfg.Herbivores, cfg.Carnivores = *plants, *herbivores, *carnivores
-	cfg.Rescue = *rescue
+	if *printConfig {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(sim.DefaultConfig()); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	// Precedence: built-in defaults < config file < explicitly-set CLI flags.
+	if *configPath != "" {
+		data, err := os.ReadFile(*configPath)
+		if err != nil {
+			log.Fatalf("reading config: %v", err)
+		}
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			log.Fatalf("parsing config %s: %v", *configPath, err)
+		}
+	}
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "width":
+			cfg.Width = *width
+		case "height":
+			cfg.Height = *height
+		case "plants":
+			cfg.Plants = *plants
+		case "herbivores":
+			cfg.Herbivores = *herbivores
+		case "carnivores":
+			cfg.Carnivores = *carnivores
+		case "rescue":
+			cfg.Rescue = *rescue
+		}
+	})
 	if cfg.TargetPlants < cfg.Plants {
 		cfg.TargetPlants = cfg.Plants
 	}

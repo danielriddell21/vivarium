@@ -176,6 +176,27 @@ reproduces the same run exactly.
 | `-herbivores` | 80 | initial herbivore count |
 | `-carnivores` | 8 | initial carnivore count |
 | `-rescue` | true | immigration when a tier nears extinction (set `false` for raw dynamics) |
+| `-config` | — | path to a JSON config file overriding defaults |
+| `-print-config` | — | print the default config as JSON and exit |
+
+### Tuning the ecosystem
+
+Beyond the population/size flags, the ecological, metabolic, and learning scalars —
+metabolism costs, reproduction threshold, mutation rate, food regrowth, predation
+gains, learning rates, etc. — are exposed as a JSON config so you can tune a run
+**without recompiling**. Grab a template and edit it:
+
+```sh
+go run ./cmd/vivarium -print-config > myconfig.json   # or copy docs/config.example.json
+go run ./cmd/vivarium -config myconfig.json
+```
+
+Config files may be **partial** — only the fields you include are overridden,
+everything else keeps its default. Precedence is: built-in defaults → config file →
+explicitly-set CLI flags. The full default config (every tunable) is committed at
+[`docs/config.example.json`](docs/config.example.json). Morphological trait ranges
+(size/speed/sense bounds) remain compile-time, since they're the search space
+evolution explores.
 
 > On Linux you need the usual Ebiten build dependencies (OpenGL + X11 dev headers,
 > e.g. `libgl1-mesa-dev xorg-dev libxxf86vm-dev libasound2-dev`).
