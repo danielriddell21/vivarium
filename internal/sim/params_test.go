@@ -3,8 +3,31 @@ package sim
 import (
 	"encoding/json"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"testing"
 )
+
+// TestLoadConfig writes a partial config file and checks it overlays the defaults.
+func TestLoadConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cfg.json")
+	if err := os.WriteFile(path, []byte(`{"herbivores":3,"params":{"mutationStd":0.9}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Herbivores != 3 {
+		t.Fatalf("herbivores override not applied: %d", cfg.Herbivores)
+	}
+	if cfg.Params.MutationStd != 0.9 {
+		t.Fatalf("mutationStd override not applied: %v", cfg.Params.MutationStd)
+	}
+	if cfg.Params.ReproThreshold != DefaultParams().ReproThreshold {
+		t.Fatal("unspecified param should keep its default")
+	}
+}
 
 // TestParamsAffectReproduction confirms a tuned Param actually changes behaviour:
 // an unreachable reproduction threshold means no agent ever gives birth.

@@ -123,13 +123,11 @@ func main() {
 
 	// Precedence: built-in defaults < config file < explicitly-set CLI flags.
 	if *configPath != "" {
-		data, err := os.ReadFile(*configPath)
+		c, err := sim.LoadConfig(*configPath)
 		if err != nil {
-			log.Fatalf("reading config: %v", err)
+			log.Fatalf("config: %v", err)
 		}
-		if err := json.Unmarshal(data, &cfg); err != nil {
-			log.Fatalf("parsing config %s: %v", *configPath, err)
-		}
+		cfg = c
 	}
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {

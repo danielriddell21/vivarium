@@ -166,6 +166,24 @@ go run ./cmd/vivarium -seed 42   # reproducible run
 All randomness is drawn from a single seeded generator, so a given `-seed`
 reproduces the same run exactly.
 
+### Headless runs
+
+For long offline experiments there's a separate **headless** binary that runs the
+simulation with no GUI (it imports only the sim core — no Ebiten, no display) and
+streams CSV statistics, so it starts instantly and is easy to redirect and plot:
+
+```sh
+go run ./cmd/vivarium-headless -seed 1 -ticks 20000 -every 200 > run.csv
+go run ./cmd/vivarium-headless -config myconfig.json -ticks 50000 > run.csv
+go run ./cmd/vivarium-headless -print-config > config.json   # display-free
+```
+
+Each row reports the tick, the three population counts, mean/max generation, the
+mean of each evolved trait (size, speed, sense, plasticity, curiosity), mean
+lifetime learning drift, and the number of distinct living lineages — so you can
+watch selection and adaptation over far longer runs than the interactive view. Runs
+are deterministic for a given seed and config.
+
 ### Flags
 
 | Flag | Default | Description |
@@ -187,7 +205,7 @@ gains, learning rates, etc. — are exposed as a JSON config so you can tune a r
 **without recompiling**. Grab a template and edit it:
 
 ```sh
-go run ./cmd/vivarium -print-config > myconfig.json   # or copy docs/config.example.json
+go run ./cmd/vivarium-headless -print-config > myconfig.json   # or copy docs/config.example.json
 go run ./cmd/vivarium -config myconfig.json
 ```
 
@@ -204,7 +222,8 @@ evolution explores.
 ## Layout
 
 ```
-cmd/vivarium        entry point: flags, seeding, window setup
+cmd/vivarium          GUI entry point: flags, seeding, window setup
+cmd/vivarium-headless  no-GUI runner: CSV stats for offline experiments
 internal/geom       2D vectors + toroidal math
 internal/neural     hand-rolled recurrent brain + world-model (+ tests)
 internal/sim        World, Agent, Food, Traits, evolution + learning (+ tests)
