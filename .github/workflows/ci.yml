@@ -36,3 +36,8 @@ jobs:
 
       - name: Build
         run: go build ./...
+
+      # The headless binary needs no display, so it doubles as an end-to-end smoke
+      # test of the simulation core.
+      - name: Headless smoke run
+        run: go run ./cmd/vivarium-headless -seed 1 -ticks 500 -every 250
