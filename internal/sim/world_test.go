@@ -14,6 +14,7 @@ func testConfig() Config {
 		Width: 400, Height: 300,
 		Plants: 40, Herbivores: 20, Carnivores: 5,
 		TargetPlants: 50,
+		Params:       DefaultParams(),
 	}
 }
 
@@ -68,13 +69,13 @@ func TestStepRunsWithoutPanic(t *testing.T) {
 func TestReproductionIncreasesGeneration(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(3)), testConfig())
 	parent := w.Agents[0]
-	parent.Energy = reproThreshold + 10
+	parent.Energy = w.params.ReproThreshold + 10
 	before := len(w.Agents)
 	child := w.reproduce(parent)
 	if child.Generation != parent.Generation+1 {
 		t.Fatalf("child generation %d, expected %d", child.Generation, parent.Generation+1)
 	}
-	if parent.Energy >= reproThreshold {
+	if parent.Energy >= w.params.ReproThreshold {
 		t.Fatalf("parent energy should drop after reproduction, got %v", parent.Energy)
 	}
 	// reproduce returns the child but does not append it; Step does that.
@@ -88,14 +89,14 @@ func TestReproductionIncreasesGeneration(t *testing.T) {
 func TestReproduceSetsCooldown(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(3)), testConfig())
 	parent := w.Agents[0]
-	parent.Energy = reproThreshold + 10
+	parent.Energy = w.params.ReproThreshold + 10
 	parent.ReproCooldown = 0
 	child := w.reproduce(parent)
-	if parent.ReproCooldown != gestation(parent.Kind) {
-		t.Fatalf("parent cooldown = %d, want %d", parent.ReproCooldown, gestation(parent.Kind))
+	if parent.ReproCooldown != w.gestation(parent.Kind) {
+		t.Fatalf("parent cooldown = %d, want %d", parent.ReproCooldown, w.gestation(parent.Kind))
 	}
-	if child.ReproCooldown != gestation(parent.Kind) {
-		t.Fatalf("child cooldown = %d, want %d", child.ReproCooldown, gestation(parent.Kind))
+	if child.ReproCooldown != w.gestation(parent.Kind) {
+		t.Fatalf("child cooldown = %d, want %d", child.ReproCooldown, w.gestation(parent.Kind))
 	}
 }
 
@@ -153,12 +154,12 @@ func TestRescueDisabledStaysExtinct(t *testing.T) {
 // TestVisionSectors checks that targets and threats are binned into the correct
 // directional sector relative to the agent's heading.
 func TestVisionSectors(t *testing.T) {
-	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1))}
+	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
 	herb := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
 	herb.Heading = 0 // facing +x (east)
 	herb.Traits.SenseRadius = 200
-	carn := w.newAgent(Carnivore, geom2(60, 60), nil, Traits{}, 0) // behind-left at 225°, sector 3
-	food := &Food{Pos: geom2(140, 100), Energy: foodMaxEnergy}     // due east, ahead, sector 0
+	carn := w.newAgent(Carnivore, geom2(60, 60), nil, Traits{}, 0)             // behind-left at 225°, sector 3
+	food := &Food{Pos: geom2(140, 100), Energy: DefaultParams().FoodMaxEnergy} // due east, ahead, sector 0
 	w.Agents = []*Agent{herb, carn}
 	w.Foods = []*Food{food}
 	w.reindex()
@@ -187,7 +188,7 @@ func TestVisionSectors(t *testing.T) {
 // TestVoiceChannel checks an agent hears a same-kind neighbour's broadcast signal
 // in the correct sector, and does not hear other species.
 func TestVoiceChannel(t *testing.T) {
-	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1))}
+	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
 	herb := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
 	herb.Heading = 0
 	herb.Traits.SenseRadius = 200
@@ -210,7 +211,7 @@ func TestVoiceChannel(t *testing.T) {
 // TestLearningDriftsPlasticBrains verifies that an agent with non-zero Plasticity
 // adapts its brain over its life, while a Plasticity-0 agent does not.
 func TestLearningDriftsPlasticBrains(t *testing.T) {
-	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(2))}
+	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(2)), params: DefaultParams()}
 	w.reindex()
 
 	plastic := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
@@ -222,7 +223,7 @@ func TestLearningDriftsPlasticBrains(t *testing.T) {
 		for i := 0; i < 50; i++ {
 			out := a.think(w)
 			a.act(w, out)
-			a.learn(6) // simulate repeatedly gaining energy
+			a.learn(w, 6) // simulate repeatedly gaining energy
 		}
 	}
 
@@ -242,7 +243,7 @@ func TestLineageInheritance(t *testing.T) {
 	if a.LineageID == b.LineageID {
 		t.Fatal("distinct founders should have distinct lineages")
 	}
-	a.Energy = reproThreshold + 10
+	a.Energy = w.params.ReproThreshold + 10
 	a.ReproCooldown = 0
 	child := w.reproduce(a)
 	if child.LineageID != a.LineageID {
@@ -315,7 +316,7 @@ func TestGenealogyRecordsAndPrunes(t *testing.T) {
 }
 
 func TestCarnivoreEatsHerbivore(t *testing.T) {
-	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0}
+	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0, params: DefaultParams()}
 	carn := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)
 	herb := w.newAgent(Herbivore, geom2(101, 100), nil, Traits{}, 0)
 	w.Agents = []*Agent{carn, herb}
@@ -331,9 +332,9 @@ func TestCarnivoreEatsHerbivore(t *testing.T) {
 }
 
 func TestHerbivoreEatsFood(t *testing.T) {
-	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0}
+	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), targetPlants: 0, params: DefaultParams()}
 	herb := w.newAgent(Herbivore, geom2(50, 50), nil, Traits{}, 0)
-	food := &Food{Pos: geom2(51, 50), Energy: foodMaxEnergy}
+	food := &Food{Pos: geom2(51, 50), Energy: DefaultParams().FoodMaxEnergy}
 	w.Agents = []*Agent{herb}
 	w.Foods = []*Food{food}
 	w.reindex()
@@ -342,7 +343,7 @@ func TestHerbivoreEatsFood(t *testing.T) {
 	if herb.Energy <= e0 {
 		t.Fatalf("herbivore should gain energy from food, %v -> %v", e0, herb.Energy)
 	}
-	if food.Energy >= foodMaxEnergy {
+	if food.Energy >= DefaultParams().FoodMaxEnergy {
 		t.Fatal("food energy should decrease after being eaten")
 	}
 }

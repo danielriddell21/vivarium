@@ -28,7 +28,7 @@ func bruteNearestAgent(w *World, pos geom.Vec2, k Kind, radius float64, exclude 
 // toroidal edges where the cell window wraps.
 func TestGridMatchesBruteForce(t *testing.T) {
 	rng := rand.New(rand.NewSource(123))
-	w := &World{W: 640, H: 480, rng: rng}
+	w := &World{W: 640, H: 480, rng: rng, params: DefaultParams()}
 	for i := 0; i < 400; i++ {
 		w.Agents = append(w.Agents, w.newAgent(Herbivore, w.randPos(), nil, Traits{}, 0))
 	}

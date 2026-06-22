@@ -8,48 +8,34 @@ import (
 	"github.com/danielriddell21/vivarium/internal/neural"
 )
 
-// Energy / reproduction tunables.
+// Sampling / retention cadence (not ecological tunables).
 const (
-	reproThreshold  = 120.0 // energy at which an agent reproduces
-	startEnergyHerb = 70.0
-	startEnergyCarn = 90.0
-	carnivoreGain   = 0.5 // fraction of prey energy a carnivore absorbs
-	carnivoreBonus  = 8.0 // flat energy bonus per kill; small so one kill alone
-	//                       does not instantly fund a birth
-	// Gestation/maturation cooldowns (ticks). Prey reproduce faster than
-	// predators, as in real food webs, so herbivores can recover from predation.
-	gestationHerb = 45
-	gestationCarn = 110
-	mutationRate  = 0.18 // per-weight probability of mutation in offspring
-	mutationStd   = 0.35 // std of Gaussian weight perturbation
-	historyEvery  = 6    // sample population counts every N ticks
-	maxHistory    = 1200 // cap on retained history samples
-	pruneEvery    = 120  // prune the genealogy to ancestors-of-living every N ticks
+	historyEvery = 6    // sample population counts every N ticks
+	maxHistory   = 1200 // cap on retained history samples
+	pruneEvery   = 120  // prune the genealogy to ancestors-of-living every N ticks
 )
 
-// gestation returns the post-reproduction cooldown for the given kind.
-func gestation(k Kind) int {
-	if k == Carnivore {
-		return gestationCarn
-	}
-	return gestationHerb
-}
-
-// rescueChance is the per-tick probability of one immigrant arriving for a tier
-// that has fallen below its rescue floor.
-const rescueChance = 0.05
-
-// Config holds the initial-population and world-size parameters.
+// Config holds the initial-population, world-size, and tunable parameters. It is
+// JSON-serialisable so a run can be configured from a file.
 type Config struct {
-	Width, Height                  float64
-	Plants, Herbivores, Carnivores int
-	TargetPlants                   int // plant count the world tries to maintain
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+
+	Plants     int `json:"plants"`
+	Herbivores int `json:"herbivores"`
+	Carnivores int `json:"carnivores"`
+
+	TargetPlants int `json:"targetPlants"` // plant count the world tries to maintain
 
 	// Rescue enables a metapopulation "rescue effect": when a mobile tier drops
 	// below its floor, occasional immigrants arrive so the ecosystem recovers
 	// instead of collapsing to permanent extinction. Disable for raw dynamics.
-	Rescue                       bool
-	MinHerbivores, MinCarnivores int
+	Rescue        bool `json:"rescue"`
+	MinHerbivores int  `json:"minHerbivores"`
+	MinCarnivores int  `json:"minCarnivores"`
+
+	// Params are the tunable ecological/metabolic/learning scalars.
+	Params Params `json:"params"`
 }
 
 // DefaultConfig returns a balanced starting configuration.
@@ -61,6 +47,7 @@ func DefaultConfig() Config {
 		Rescue:        true,
 		MinHerbivores: 8,
 		MinCarnivores: 4,
+		Params:        DefaultParams(),
 	}
 }
 
@@ -81,6 +68,7 @@ type World struct {
 	nextID        int
 	nextLineageID int
 
+	params         Params
 	targetPlants   int
 	rescue         bool
 	minHerb        int
@@ -164,13 +152,14 @@ func NewWorld(rng *rand.Rand, cfg Config) *World {
 	w := &World{
 		W: cfg.Width, H: cfg.Height,
 		rng:          rng,
+		params:       cfg.Params,
 		targetPlants: cfg.TargetPlants,
 		rescue:       cfg.Rescue,
 		minHerb:      cfg.MinHerbivores,
 		minCarn:      cfg.MinCarnivores,
 	}
 	for i := 0; i < cfg.Plants; i++ {
-		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: foodMaxEnergy * rng.Float64()})
+		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodMaxEnergy * rng.Float64()})
 	}
 	for i := 0; i < cfg.Herbivores; i++ {
 		w.Agents = append(w.Agents, w.newAgent(Herbivore, w.randPos(), nil, Traits{}, 0))
@@ -196,9 +185,9 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 		brain = neural.New(w.rng, BrainInputs, BrainHidden, BrainOutputs)
 		traits = defaultTraits(w.rng, k)
 	}
-	start := startEnergyHerb
+	start := w.params.StartEnergyHerb
 	if k == Carnivore {
-		start = startEnergyCarn
+		start = w.params.StartEnergyCarn
 	}
 	// A fresh agent founds its own lineage; reproduce() overrides this so children
 	// inherit their parent's lineage instead.
@@ -225,7 +214,7 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 // Step advances the simulation by one tick.
 func (w *World) Step() {
 	for _, f := range w.Foods {
-		f.regrow()
+		w.regrowFood(f)
 	}
 	w.reindex()
 
@@ -240,12 +229,12 @@ func (w *World) Step() {
 			w.resolveEat(a)
 		}
 		// Reinforce the behaviour that produced this tick's energy change.
-		a.learn(a.Energy - before)
+		a.learn(w, a.Energy-before)
 		if a.Energy <= 0 {
 			a.Alive = false
 			continue
 		}
-		if a.ReproCooldown <= 0 && a.Energy >= reproThreshold {
+		if a.ReproCooldown <= 0 && a.Energy >= w.params.ReproThreshold {
 			newborns = append(newborns, w.reproduce(a))
 		}
 	}
@@ -272,18 +261,18 @@ func (w *World) Step() {
 func (w *World) resolveEat(a *Agent) {
 	switch a.Kind {
 	case Herbivore:
-		if f := w.nearestRipeFood(a.Pos, a.Traits.Size+foodEatRadius); f != nil {
-			bite := math.Min(foodBiteEnergy, f.Energy)
+		if f := w.nearestRipeFood(a.Pos, a.Traits.Size+w.params.FoodEatRadius); f != nil {
+			bite := math.Min(w.params.FoodBiteEnergy, f.Energy)
 			f.Energy -= bite
 			a.Energy += bite
 		}
 	case Carnivore:
-		reach := a.Traits.Size + foodEatRadius
+		reach := a.Traits.Size + w.params.FoodEatRadius
 		if prey := w.nearestAgentOfKind(a.Pos, Herbivore, reach, a.ID); prey != nil && prey.Alive {
 			prey.Alive = false
-			a.Energy += prey.Energy*carnivoreGain + carnivoreBonus
-			if a.Energy > maxEnergy {
-				a.Energy = maxEnergy
+			a.Energy += prey.Energy*w.params.CarnivoreGain + w.params.CarnivoreBonus
+			if a.Energy > w.params.MaxEnergy {
+				a.Energy = w.params.MaxEnergy
 			}
 		}
 	}
@@ -296,14 +285,14 @@ func (w *World) reproduce(parent *Agent) *Agent {
 	parent.Energy -= child
 
 	brain := parent.Brain.Clone()
-	brain.Mutate(w.rng, mutationRate, mutationStd)
+	brain.Mutate(w.rng, w.params.MutationRate, w.params.MutationStd)
 	traits := parent.Traits.mutated(w.rng)
 
-	parent.ReproCooldown = gestation(parent.Kind)
+	parent.ReproCooldown = w.gestation(parent.Kind)
 
 	off := w.newAgent(parent.Kind, parent.Pos, brain, traits, parent.Generation+1)
 	off.Energy = child
-	off.ReproCooldown = gestation(parent.Kind) // maturation: newborns can't breed immediately
+	off.ReproCooldown = w.gestation(parent.Kind) // maturation: newborns can't breed immediately
 	// Inherit the parent's lineage (newAgent assigned a fresh one by default).
 	off.LineageID = parent.LineageID
 	off.ParentID = parent.ID
@@ -329,7 +318,7 @@ func (w *World) compactDead() {
 // one plant per tick to keep regrowth gradual.
 func (w *World) maintainFood() {
 	if len(w.Foods) < w.targetPlants && w.rng.Float64() < 0.5 {
-		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: foodBiteEnergy})
+		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodBiteEnergy})
 	}
 }
 
@@ -341,10 +330,10 @@ func (w *World) maintainPopulations() {
 		return
 	}
 	c := w.CountKinds()
-	if c.Herbivores < w.minHerb && w.rng.Float64() < rescueChance {
+	if c.Herbivores < w.minHerb && w.rng.Float64() < w.params.RescueChance {
 		w.immigrate(Herbivore)
 	}
-	if c.Carnivores < w.minCarn && w.rng.Float64() < rescueChance {
+	if c.Carnivores < w.minCarn && w.rng.Float64() < w.params.RescueChance {
 		w.immigrate(Carnivore)
 	}
 }
@@ -358,12 +347,12 @@ func (w *World) immigrate(k Kind) {
 	gen := 0
 	if donor := w.randomAgentOfKind(k); donor != nil {
 		brain = donor.Brain.Clone()
-		brain.Mutate(w.rng, mutationRate, mutationStd)
+		brain.Mutate(w.rng, w.params.MutationRate, w.params.MutationStd)
 		traits = donor.Traits.mutated(w.rng)
 		gen = donor.Generation
 	}
 	a := w.newAgent(k, w.randPos(), brain, traits, gen)
-	a.ReproCooldown = gestation(k) // immigrants must establish before breeding
+	a.ReproCooldown = w.gestation(k) // immigrants must establish before breeding
 	w.Agents = append(w.Agents, a)
 }
 
@@ -388,7 +377,7 @@ func (w *World) nearestRipeFood(pos geom.Vec2, radius float64) *Food {
 	var best *Food
 	bestD := radius
 	w.grid.forEachFoodNear(pos, radius, func(f *Food) {
-		if !f.Ripe() {
+		if !w.foodRipe(f) {
 			return
 		}
 		if d := pos.ToroidalDist(f.Pos, w.W, w.H); d <= bestD {
