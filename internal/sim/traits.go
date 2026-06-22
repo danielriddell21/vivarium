@@ -11,6 +11,28 @@ type Traits struct {
 	SenseRadius float64 // how far the agent can perceive food/prey/predators
 	Plasticity  float64 // in-lifetime learning rate (0 = a fixed, non-learning brain)
 	Curiosity   float64 // weight of intrinsic (novelty) reward (0 = pure forager)
+	Diet        float64 // dietary preference 0..1 across food types (herbivores)
+}
+
+// edibility returns how efficiently a herbivore with the given Diet digests food
+// of foodType: 1.0 for a perfect match, falling to 0 at the opposite preference.
+func edibility(diet float64, foodType int) float64 {
+	tv := 0.0
+	if NumFoodTypes > 1 {
+		tv = float64(foodType) / float64(NumFoodTypes-1)
+	}
+	e := 1 - abs(diet-tv)
+	if e < 0 {
+		e = 0
+	}
+	return e
+}
+
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 // Trait bounds keep mutated morphologies physically sensible.
@@ -45,6 +67,7 @@ func defaultTraits(rng *rand.Rand, k Kind) Traits {
 			SenseRadius: clamp(jitter(140), minSense, maxSense),
 			Plasticity:  clamp(jitter(0.01), minPlast, maxPlast),
 			Curiosity:   clamp(jitter(0.3), minCurio, maxCurio),
+			Diet:        rng.Float64(), // diverse initial diets so niches can emerge
 		}
 	default: // Herbivore
 		return Traits{
@@ -53,6 +76,7 @@ func defaultTraits(rng *rand.Rand, k Kind) Traits {
 			SenseRadius: clamp(jitter(110), minSense, maxSense),
 			Plasticity:  clamp(jitter(0.01), minPlast, maxPlast),
 			Curiosity:   clamp(jitter(0.3), minCurio, maxCurio),
+			Diet:        rng.Float64(), // diverse initial diets so niches can emerge
 		}
 	}
 }
@@ -72,5 +96,6 @@ func (t Traits) mutated(rng *rand.Rand) Traits {
 		// evolve them on from zero (or back off) rather than being stuck once at 0.
 		Plasticity: clamp(t.Plasticity+rng.NormFloat64()*0.004, minPlast, maxPlast),
 		Curiosity:  clamp(t.Curiosity+rng.NormFloat64()*0.1, minCurio, maxCurio),
+		Diet:       clamp(t.Diet+rng.NormFloat64()*0.05, 0, 1),
 	}
 }

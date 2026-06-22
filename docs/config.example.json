@@ -5,6 +5,7 @@
   "herbivores": 80,
   "carnivores": 8,
   "targetPlants": 260,
+  "obstacles": 14,
   "rescue": true,
   "minHerbivores": 8,
   "minCarnivores": 4,
@@ -31,6 +32,10 @@
     "baselineLR": 0.02,
     "worldModelLR": 0.03,
     "curiosityGain": 0.6,
-    "rescueChance": 0.05
+    "rescueChance": 0.05,
+    "seasonLength": 3000,
+    "seasonAmplitude": 0.6,
+    "dayLength": 1200,
+    "nightVision": 0.45
   }
 }

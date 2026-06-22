@@ -151,7 +151,9 @@ func (a *Agent) sense(w *World) []float64 {
 	target := in[0:VisionSectors]
 	threat := in[VisionSectors : 2*VisionSectors]
 	voice := in[2*VisionSectors : 3*VisionSectors]
-	r := a.Traits.SenseRadius
+	// Effective vision shrinks at night, so the same agent perceives less in the
+	// dark — pressure for caution, memory, and communication.
+	r := a.Traits.SenseRadius * w.LightFactor()
 
 	// voiceDist tracks the nearest conspecific per sector so voice carries the
 	// closest neighbour's signal rather than an arbitrary one.
@@ -160,11 +162,12 @@ func (a *Agent) sense(w *World) []float64 {
 		voiceDist[i] = math.Inf(1)
 	}
 
-	// Herbivores forage on plants (the carnivore target channel is filled below).
+	// Herbivores forage on plants; each plant is perceived in proportion to how
+	// edible it is for this agent's diet, so specialists are drawn to their type.
 	if a.Kind == Herbivore {
 		w.grid.forEachFoodNear(a.Pos, r, func(f *Food) {
 			if w.foodRipe(f) {
-				a.see(w, f.Pos, target)
+				a.see(w, f.Pos, target, edibility(a.Traits.Diet, f.Type), r)
 			}
 		})
 	}
@@ -175,38 +178,40 @@ func (a *Agent) sense(w *World) []float64 {
 		}
 		switch {
 		case a.Kind == Herbivore && o.Kind == Carnivore:
-			a.see(w, o.Pos, threat) // predators
+			a.see(w, o.Pos, threat, 1, r) // predators
 		case a.Kind == Carnivore && o.Kind == Herbivore:
-			a.see(w, o.Pos, target) // prey
+			a.see(w, o.Pos, target, 1, r) // prey
 		}
 		if o.Kind == a.Kind {
-			a.hear(w, o, voice, voiceDist[:]) // conspecific broadcast
+			a.hear(w, o, voice, voiceDist[:], r) // conspecific broadcast
 		}
 	})
 	return in
 }
 
-// see records the proximity of point p into whichever vision sector it lies in,
-// relative to the agent's heading, keeping the maximum (nearest) per sector.
-// Points beyond the sense radius are ignored.
-func (a *Agent) see(w *World, p geom.Vec2, sectors []float64) {
+// see records the proximity of point p (scaled by weight) into whichever vision
+// sector it lies in, relative to the agent's heading, keeping the maximum per
+// sector. radius is the effective sense radius this tick; points beyond it are
+// ignored.
+func (a *Agent) see(w *World, p geom.Vec2, sectors []float64, weight, radius float64) {
 	d := a.Pos.ShortestDelta(p, w.W, w.H)
 	dist := d.Len()
-	if dist == 0 || dist > a.Traits.SenseRadius {
+	if dist == 0 || dist > radius {
 		return
 	}
 	sec := a.sectorOf(d)
-	if prox := 1 - dist/a.Traits.SenseRadius; prox > sectors[sec] {
+	if prox := (1 - dist/radius) * weight; prox > sectors[sec] {
 		sectors[sec] = prox
 	}
 }
 
 // hear records the signal broadcast by conspecific o into the voice channel,
-// keeping the nearest neighbour's signal per sector.
-func (a *Agent) hear(w *World, o *Agent, voice, voiceDist []float64) {
+// keeping the nearest neighbour's signal per sector. radius is the effective sense
+// radius this tick.
+func (a *Agent) hear(w *World, o *Agent, voice, voiceDist []float64, radius float64) {
 	d := a.Pos.ShortestDelta(o.Pos, w.W, w.H)
 	dist := d.Len()
-	if dist == 0 || dist > a.Traits.SenseRadius {
+	if dist == 0 || dist > radius {
 		return
 	}
 	sec := a.sectorOf(d)
@@ -277,7 +282,8 @@ func (a *Agent) act(w *World, out []float64) (wantsEat bool) {
 	if speed < 0 {
 		speed = 0
 	}
-	a.Pos = a.Pos.Add(geom.FromAngle(a.Heading).Scale(speed)).WrapTo(w.W, w.H)
+	proposed := a.Pos.Add(geom.FromAngle(a.Heading).Scale(speed)).WrapTo(w.W, w.H)
+	a.Pos = w.resolveMove(a.Pos, proposed, a.Traits.Size)
 
 	a.Energy -= a.basalCost(w) + w.params.MoveCost*speed
 	if a.Energy > w.params.MaxEnergy {

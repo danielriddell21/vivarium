@@ -1,5 +1,7 @@
 package sim
 
+import "math"
+
 // Params holds the simulation's tunable scalars. They were previously hard-coded
 // constants; collecting them here lets a run be configured from a JSON file (see
 // cmd/vivarium's -config / -print-config) without recompiling. Morphological trait
@@ -42,6 +44,18 @@ type Params struct {
 
 	// Rescue effect.
 	RescueChance float64 `json:"rescueChance"`
+
+	// Seasons: a sinusoidal cycle that scales plant regrowth between scarcity and
+	// plenty. SeasonLength is the period in ticks (0 disables); SeasonAmplitude is
+	// the 0..1 swing around the baseline regrowth rate.
+	SeasonLength    int     `json:"seasonLength"`
+	SeasonAmplitude float64 `json:"seasonAmplitude"`
+
+	// Day/night: a cycle that scales effective vision range. DayLength is the
+	// period in ticks (0 disables); NightVision (0..1) is the fraction of sense
+	// radius retained at the darkest point of night.
+	DayLength   int     `json:"dayLength"`
+	NightVision float64 `json:"nightVision"`
 }
 
 // DefaultParams returns the balanced defaults the simulation was tuned with.
@@ -55,7 +69,35 @@ func DefaultParams() Params {
 		FoodMaxEnergy: 60, FoodRegrowRate: 0.18, FoodEatRadius: 8, FoodBiteEnergy: 14,
 		RewardScale: 0.08, BaselineLR: 0.02, WorldModelLR: 0.03, CuriosityGain: 0.6,
 		RescueChance: 0.05,
+		SeasonLength: 3000, SeasonAmplitude: 0.6,
+		DayLength: 1200, NightVision: 0.45,
 	}
+}
+
+// LightFactor returns the current daylight level, scaling effective vision range
+// from NightVision (deepest night) to 1 (full day). Deterministic in the tick.
+func (w *World) LightFactor() float64 {
+	if w.params.DayLength <= 0 {
+		return 1
+	}
+	phase := 2 * math.Pi * float64(w.Tick) / float64(w.params.DayLength)
+	day := 0.5 + 0.5*math.Sin(phase) // 0 at midnight, 1 at midday
+	return w.params.NightVision + (1-w.params.NightVision)*day
+}
+
+// SeasonFactor returns the current plant-regrowth multiplier from the seasonal
+// cycle: 1 at the equinoxes, up to 1+amplitude in summer and down to 1-amplitude
+// (floored at 0) in winter. It is a deterministic function of the tick.
+func (w *World) SeasonFactor() float64 {
+	if w.params.SeasonLength <= 0 {
+		return 1
+	}
+	phase := 2 * math.Pi * float64(w.Tick) / float64(w.params.SeasonLength)
+	f := 1 + w.params.SeasonAmplitude*math.Sin(phase)
+	if f < 0 {
+		f = 0
+	}
+	return f
 }
 
 // gestation returns the post-reproduction cooldown for the given kind.
@@ -72,10 +114,11 @@ func (w *World) foodRipe(f *Food) bool { return f.Energy >= w.params.FoodBiteEne
 // FoodRipe is the exported form used by the renderer to decide what to draw.
 func (w *World) FoodRipe(f *Food) bool { return w.foodRipe(f) }
 
-// regrowFood advances a plant's energy by one tick toward the cap.
+// regrowFood advances a plant's energy by one tick toward the cap, scaled by the
+// current season (plants grow faster in summer, slower in winter).
 func (w *World) regrowFood(f *Food) {
 	if f.Energy < w.params.FoodMaxEnergy {
-		f.Energy += w.params.FoodRegrowRate
+		f.Energy += w.params.FoodRegrowRate * w.SeasonFactor()
 		if f.Energy > w.params.FoodMaxEnergy {
 			f.Energy = w.params.FoodMaxEnergy
 		}

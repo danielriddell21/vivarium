@@ -21,6 +21,8 @@ var (
 	colSelected   = color.RGBA{0xff, 0xe0, 0x4f, 0xff}
 	colText       = color.RGBA{0xe6, 0xe6, 0xe6, 0xff}
 	colPanel      = color.RGBA{0x00, 0x00, 0x00, 0xc0}
+	colObstacle   = color.RGBA{0x33, 0x37, 0x3b, 0xff}
+	colFood2      = color.RGBA{0x3a, 0xa8, 0x9a, 0xff} // second plant type (teal)
 )
 
 // face is a shared bitmap font for all overlay text (no external font files).
@@ -35,13 +37,21 @@ var whiteImage = func() *ebiten.Image {
 
 // Draw renders one frame: world first, then overlays.
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(colBackground)
+	screen.Fill(nightTint(g.World.LightFactor()))
+
+	for _, o := range g.World.Obstacles() {
+		vector.DrawFilledCircle(screen, float32(o.Pos.X), float32(o.Pos.Y), float32(o.Radius), colObstacle, true)
+	}
 
 	for _, f := range g.World.Foods {
 		if !g.World.FoodRipe(f) {
 			continue
 		}
-		vector.DrawFilledCircle(screen, float32(f.Pos.X), float32(f.Pos.Y), 2, colFood, false)
+		clr := colFood
+		if f.Type == 1 {
+			clr = colFood2
+		}
+		vector.DrawFilledCircle(screen, float32(f.Pos.X), float32(f.Pos.Y), 2, clr, false)
 	}
 
 	for _, a := range g.World.Agents {
@@ -145,6 +155,19 @@ func drawPanel(dst *ebiten.Image, x, y, w, h float64) {
 }
 
 func radToDeg(r float64) float64 { return r * 180 / math.Pi }
+
+// nightTint blends the background between a dark night blue and the daytime colour
+// by the current light level (~0.45 at night, 1 at midday).
+func nightTint(light float64) color.RGBA {
+	t := (light - 0.45) / 0.55 // normalise the usual [0.45,1] range to [0,1]
+	if t < 0 {
+		t = 0
+	} else if t > 1 {
+		t = 1
+	}
+	lerp := func(night, day uint8) uint8 { return uint8(float64(night) + (float64(day)-float64(night))*t) }
+	return color.RGBA{lerp(0x05, 0x12), lerp(0x07, 0x16), lerp(0x14, 0x14), 0xff}
+}
 
 // normDeg normalises an angle in degrees to the range [0, 360).
 func normDeg(d float64) float64 {

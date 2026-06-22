@@ -108,6 +108,25 @@ herbivore, then starve all at once. Three mechanisms damp this into coexistence:
   continues), modelling a metapopulation rescue. Pass `-rescue=false` for the raw,
   collapse-prone dynamics.
 
+## Environment
+
+The world is more than an empty plain — four environmental systems add structure
+and time-varying pressure (all tunable in the config, set to 0 to disable):
+
+- **Seasons** — a slow sinusoidal cycle scales plant regrowth between scarcity and
+  plenty (`seasonLength`, `seasonAmplitude`), driving boom/bust resource swings.
+- **Day/night** — a faster cycle scales every agent's *effective vision range* down
+  toward `nightVision` at night, so agents periodically go half-blind — pressure for
+  caution, memory, and signalling. The background dims at night and the HUD shows
+  the current `season`/`light` levels.
+- **Terrain** — `obstacles` impassable rocks are scattered at world start; agents
+  can't move into them (but can always escape if pushed in), carving the plain into
+  spaces to navigate.
+- **Multiple food types** — plants come in two types (different colours). Herbivores
+  evolve a **`Diet`** trait that sets which type they digest efficiently; they
+  perceive food weighted by edibility and gain little from a mismatched plant, so
+  dietary specialists and niches can emerge.
+
 ## Controls
 
 | Key / action | Effect |
