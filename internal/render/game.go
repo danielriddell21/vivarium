@@ -39,6 +39,9 @@ type Game struct {
 	phyloOn       bool
 	phylo         *phyloView
 	framesToPhylo int
+
+	// hideSignals suppresses the communication halos drawn around agents.
+	hideSignals bool
 }
 
 // NewGame returns a Game ready to be passed to ebiten.RunGame.
@@ -87,6 +90,9 @@ func (g *Game) handleInput() {
 		g.phyloOn = !g.phyloOn
 		g.framesToPhylo = 0
 		g.analysisOn, g.lineageOn = false, false
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
+		g.hideSignals = !g.hideSignals
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {

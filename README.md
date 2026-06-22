@@ -89,8 +89,9 @@ update order, keeping the channel order-independent and deterministic.
 Nothing rewards signalling on its own; the channel is just wired into the evolving,
 learning brains, so communicative strategies (alarm calls, flocking, coordinated
 movement) can *emerge* if they pay off. Active broadcasts are visible in-world as a
-faint **halo** — warm for a positive signal, cool for a negative one — and the
-inspector shows the incoming `voices` channel and the agent's own `signal` output.
+faint **halo** — warm for a positive signal, cool for a negative one (toggle with
+`h`) — and the inspector shows the incoming `voices` channel and the agent's own
+`signal` output.
 
 ## Population stability
 
@@ -118,6 +119,7 @@ herbivore, then starve all at once. Three mechanisms damp this into coexistence:
 | `g` | toggle the **species view** (genome clustering + PCA map) |
 | `l` | toggle the **lineage view** (lineage colouring + abundance-over-time chart) |
 | `p` | toggle the **phylogeny view** (coalescent genealogy tree of the living population) |
+| `h` | toggle the communication **halos** around broadcasting agents |
 
 The HUD shows run state and live counts, a line chart tracks plant/herbivore/
 carnivore counts over time, and the inspector shows a selected agent's energy, age,

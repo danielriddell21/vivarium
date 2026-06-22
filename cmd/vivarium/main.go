@@ -72,6 +72,7 @@ Controls
 	         stacked chart of lineage abundance over time
 	p        toggle the phylogeny view: a coalescent genealogy tree of the
 	         living population (time runs left to right)
+	h        toggle the communication halos drawn around broadcasting agents
 
 Overlays
 
