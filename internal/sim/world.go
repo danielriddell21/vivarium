@@ -77,7 +77,8 @@ type World struct {
 	lineageHistory []map[int]int          // per sample: lineage ID -> living count
 	genealogy      map[int]*GenealogyNode // retained ancestry of the living population
 
-	grid *spatialGrid
+	grid   *spatialGrid
+	active []*Agent // reused scratch: agents alive at the start of a tick
 }
 
 // GenealogyNode is one agent's entry in the retained family tree. Nodes are kept
@@ -218,14 +219,31 @@ func (w *World) Step() {
 	}
 	w.reindex()
 
-	var newborns []*Agent
+	// Collect the agents alive at the start of the tick.
+	active := w.active[:0]
 	for _, a := range w.Agents {
+		if a.Alive {
+			active = append(active, a)
+		}
+	}
+	w.active = active
+
+	// Phase 1 (parallel): every agent senses and runs its brain. This only reads
+	// shared state — the spatial grid and other agents' frozen positions/signals —
+	// and writes solely to per-agent fields (brain memory, cached I/O, pending
+	// signal), so it is race-free and produces results identical to a sequential
+	// pass. The heavy per-tick cost (vision + neural nets) lives here.
+	w.thinkAll(active)
+
+	// Phase 2 (sequential): apply movement, eating, learning, death and birth,
+	// which mutate shared state and must run in a deterministic order.
+	var newborns []*Agent
+	for _, a := range active {
 		if !a.Alive {
-			continue
+			continue // killed earlier this phase by a predator
 		}
 		before := a.Energy
-		out := a.think(w)
-		if a.act(w, out) {
+		if a.act(w, a.LastOutputs) {
 			w.resolveEat(a)
 		}
 		// Reinforce the behaviour that produced this tick's energy change.

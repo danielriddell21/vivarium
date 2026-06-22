@@ -184,6 +184,11 @@ lifetime learning drift, and the number of distinct living lineages — so you c
 watch selection and adaptation over far longer runs than the interactive view. Runs
 are deterministic for a given seed and config.
 
+For larger worlds the per-tick cost is dominated by each agent's vision + neural
+nets, which is read-only on shared state; that phase runs **in parallel across CPU
+cores** (with the movement/eating phase kept sequential for deterministic results),
+so big populations step several times faster on a multi-core machine.
+
 ### Flags
 
 | Flag | Default | Description |
