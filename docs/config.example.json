@@ -31,6 +31,8 @@
     "baselineLR": 0.02,
     "worldModelLR": 0.03,
     "curiosityGain": 0.6,
-    "rescueChance": 0.05
+    "rescueChance": 0.05,
+    "seasonLength": 3000,
+    "seasonAmplitude": 0.6
   }
 }

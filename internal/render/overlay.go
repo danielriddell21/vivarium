@@ -16,12 +16,13 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	if g.Paused {
 		state = "PAUSED"
 	}
-	drawPanel(screen, 6, 6, 250, 70)
+	drawPanel(screen, 6, 6, 300, 86)
 	drawText(screen, fmt.Sprintf("%s   speed x%d   tick %d", state, g.Speed, g.World.Tick), 12, 10, colText)
 	drawText(screen, fmt.Sprintf("plants %d", c.Plants), 12, 26, colFood)
 	drawText(screen, fmt.Sprintf("herbivores %d", c.Herbivores), 100, 26, colHerbivore)
 	drawText(screen, fmt.Sprintf("carnivores %d", c.Carnivores), 12, 42, colCarnivore)
-	drawText(screen, "space pause  +/- speed  click  g species  l lineage  p tree  h halos", 12, 58, colText)
+	drawText(screen, fmt.Sprintf("season x%.2f", g.World.SeasonFactor()), 12, 58, colText)
+	drawText(screen, "space pause  +/- speed  click  g/l/p views  h halos", 12, 74, colText)
 }
 
 // graph geometry (bottom-left).
