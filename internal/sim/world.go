@@ -169,7 +169,7 @@ func NewWorld(rng *rand.Rand, cfg Config) *World {
 		})
 	}
 	for i := 0; i < cfg.Plants; i++ {
-		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodMaxEnergy * rng.Float64()})
+		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodMaxEnergy * rng.Float64(), Type: rng.Intn(NumFoodTypes)})
 	}
 	for i := 0; i < cfg.Herbivores; i++ {
 		w.Agents = append(w.Agents, w.newAgent(Herbivore, w.randPos(), nil, Traits{}, 0))
@@ -291,7 +291,9 @@ func (w *World) resolveEat(a *Agent) {
 		if f := w.nearestRipeFood(a.Pos, a.Traits.Size+w.params.FoodEatRadius); f != nil {
 			bite := math.Min(w.params.FoodBiteEnergy, f.Energy)
 			f.Energy -= bite
-			a.Energy += bite
+			// Energy gained depends on how well the plant matches the diet; a
+			// mismatched plant is still consumed but yields little.
+			a.Energy += bite * edibility(a.Traits.Diet, f.Type)
 		}
 	case Carnivore:
 		reach := a.Traits.Size + w.params.FoodEatRadius
@@ -345,7 +347,7 @@ func (w *World) compactDead() {
 // one plant per tick to keep regrowth gradual.
 func (w *World) maintainFood() {
 	if len(w.Foods) < w.targetPlants && w.rng.Float64() < 0.5 {
-		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodBiteEnergy})
+		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodBiteEnergy, Type: w.rng.Intn(NumFoodTypes)})
 	}
 }
 

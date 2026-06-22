@@ -22,6 +22,7 @@ var (
 	colText       = color.RGBA{0xe6, 0xe6, 0xe6, 0xff}
 	colPanel      = color.RGBA{0x00, 0x00, 0x00, 0xc0}
 	colObstacle   = color.RGBA{0x33, 0x37, 0x3b, 0xff}
+	colFood2      = color.RGBA{0x3a, 0xa8, 0x9a, 0xff} // second plant type (teal)
 )
 
 // face is a shared bitmap font for all overlay text (no external font files).
@@ -46,7 +47,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if !g.World.FoodRipe(f) {
 			continue
 		}
-		vector.DrawFilledCircle(screen, float32(f.Pos.X), float32(f.Pos.Y), 2, colFood, false)
+		clr := colFood
+		if f.Type == 1 {
+			clr = colFood2
+		}
+		vector.DrawFilledCircle(screen, float32(f.Pos.X), float32(f.Pos.Y), 2, clr, false)
 	}
 
 	for _, a := range g.World.Agents {

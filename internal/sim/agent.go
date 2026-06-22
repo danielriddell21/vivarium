@@ -160,11 +160,12 @@ func (a *Agent) sense(w *World) []float64 {
 		voiceDist[i] = math.Inf(1)
 	}
 
-	// Herbivores forage on plants (the carnivore target channel is filled below).
+	// Herbivores forage on plants; each plant is perceived in proportion to how
+	// edible it is for this agent's diet, so specialists are drawn to their type.
 	if a.Kind == Herbivore {
 		w.grid.forEachFoodNear(a.Pos, r, func(f *Food) {
 			if w.foodRipe(f) {
-				a.see(w, f.Pos, target)
+				a.see(w, f.Pos, target, edibility(a.Traits.Diet, f.Type))
 			}
 		})
 	}
@@ -175,9 +176,9 @@ func (a *Agent) sense(w *World) []float64 {
 		}
 		switch {
 		case a.Kind == Herbivore && o.Kind == Carnivore:
-			a.see(w, o.Pos, threat) // predators
+			a.see(w, o.Pos, threat, 1) // predators
 		case a.Kind == Carnivore && o.Kind == Herbivore:
-			a.see(w, o.Pos, target) // prey
+			a.see(w, o.Pos, target, 1) // prey
 		}
 		if o.Kind == a.Kind {
 			a.hear(w, o, voice, voiceDist[:]) // conspecific broadcast
@@ -186,17 +187,17 @@ func (a *Agent) sense(w *World) []float64 {
 	return in
 }
 
-// see records the proximity of point p into whichever vision sector it lies in,
-// relative to the agent's heading, keeping the maximum (nearest) per sector.
-// Points beyond the sense radius are ignored.
-func (a *Agent) see(w *World, p geom.Vec2, sectors []float64) {
+// see records the proximity of point p (scaled by weight) into whichever vision
+// sector it lies in, relative to the agent's heading, keeping the maximum per
+// sector. Points beyond the sense radius are ignored.
+func (a *Agent) see(w *World, p geom.Vec2, sectors []float64, weight float64) {
 	d := a.Pos.ShortestDelta(p, w.W, w.H)
 	dist := d.Len()
 	if dist == 0 || dist > a.Traits.SenseRadius {
 		return
 	}
 	sec := a.sectorOf(d)
-	if prox := 1 - dist/a.Traits.SenseRadius; prox > sectors[sec] {
+	if prox := (1 - dist/a.Traits.SenseRadius) * weight; prox > sectors[sec] {
 		sectors[sec] = prox
 	}
 }

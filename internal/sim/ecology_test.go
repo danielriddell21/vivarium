@@ -59,3 +59,28 @@ func TestObstacleBlocksMovement(t *testing.T) {
 		t.Fatal("agent should have advanced toward (and stopped against) the rock")
 	}
 }
+
+// TestDietAffectsEnergyGain checks a specialist herbivore gains more from its
+// preferred food type than from the opposite type.
+func TestDietAffectsEnergyGain(t *testing.T) {
+	gain := func(diet float64, foodType int) float64 {
+		w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
+		h := w.newAgent(Herbivore, geom2(50, 50), nil, Traits{}, 0)
+		h.Traits.Diet = diet
+		h.Traits.Size = 4
+		w.Agents = []*Agent{h}
+		w.Foods = []*Food{{Pos: geom2(51, 50), Energy: DefaultParams().FoodMaxEnergy, Type: foodType}}
+		w.reindex()
+		e0 := h.Energy
+		w.resolveEat(h)
+		return h.Energy - e0
+	}
+	matched := gain(0, 0)    // type-0 specialist eating type 0
+	mismatched := gain(0, 1) // same specialist eating type 1
+	if matched <= mismatched {
+		t.Fatalf("matched diet should yield more energy: matched %v vs mismatched %v", matched, mismatched)
+	}
+	if mismatched != 0 {
+		t.Fatalf("opposite food should yield ~0 energy for a pure specialist, got %v", mismatched)
+	}
+}

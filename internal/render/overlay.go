@@ -95,7 +95,7 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 		fmt.Sprintf("energy %.1f", a.Energy),
 		fmt.Sprintf("age %d   gen %d", a.Age, a.Generation),
 		fmt.Sprintf("heading %.0f deg", normDeg(radToDeg(a.Heading))),
-		fmt.Sprintf("size %.1f  speed %.2f", a.Traits.Size, a.Traits.MaxSpeed),
+		fmt.Sprintf("size %.1f  speed %.2f  diet %.2f", a.Traits.Size, a.Traits.MaxSpeed, a.Traits.Diet),
 		fmt.Sprintf("sense %.0f  plast %.3f", a.Traits.SenseRadius, a.Traits.Plasticity),
 		fmt.Sprintf("curio %.2f  surprise %.2f", a.Traits.Curiosity, a.LastSurprise),
 		fmt.Sprintf("learned %.3f  reward %+.2f", a.Brain.LearnedDrift(), a.LastReward),
