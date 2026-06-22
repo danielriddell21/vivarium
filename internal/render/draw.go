@@ -48,7 +48,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if !a.Alive {
 			continue
 		}
-		drawAgent(screen, a, a == g.Selected, g.agentBodyColor(a))
+		drawAgent(screen, a, a == g.Selected, g.agentBodyColor(a), !g.hideSignals)
 	}
 
 	g.drawGraph(screen)
@@ -66,8 +66,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 // drawAgent renders one agent. override, when non-nil, replaces the default
-// kind-based body colour (used by the species/analysis view).
-func drawAgent(dst *ebiten.Image, a *sim.Agent, selected bool, override color.Color) {
+// kind-based body colour (used by the species/analysis view). showSignal toggles
+// the communication halo.
+func drawAgent(dst *ebiten.Image, a *sim.Agent, selected bool, override color.Color, showSignal bool) {
 	var body color.Color = colHerbivore
 	if a.Kind == sim.Carnivore {
 		body = colCarnivore
@@ -77,7 +78,7 @@ func drawAgent(dst *ebiten.Image, a *sim.Agent, selected bool, override color.Co
 	}
 	// Communication halo: a faint ring whose opacity grows with how loudly the
 	// agent is broadcasting, warm for a positive signal, cool for a negative one.
-	if s := a.Signal; s > 0.15 || s < -0.15 {
+	if s := a.Signal; showSignal && (s > 0.15 || s < -0.15) {
 		mag := s
 		if mag < 0 {
 			mag = -mag
