@@ -85,6 +85,31 @@ func TestDietAffectsEnergyGain(t *testing.T) {
 	}
 }
 
+// TestVisionOcclusion checks terrain between an agent and a target hides it, while
+// the same target is visible once the obstacle is removed.
+func TestVisionOcclusion(t *testing.T) {
+	build := func(withRock bool) []float64 {
+		w := &World{W: 1000, H: 1000, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
+		w.params.DayLength = 0 // full daylight, so only occlusion matters
+		if withRock {
+			w.obstacles = []Obstacle{{Pos: geom2(150, 100), Radius: 20}} // dead ahead, between
+		}
+		a := w.newAgent(Carnivore, geom2(100, 100), nil, Traits{}, 0)
+		a.Heading = 0
+		a.Traits.SenseRadius = 200
+		prey := w.newAgent(Herbivore, geom2(200, 100), nil, Traits{}, 0) // due east, behind the rock
+		w.Agents = []*Agent{a, prey}
+		w.reindex()
+		return a.sense(w)
+	}
+	if blocked := build(true); blocked[0] != 0 {
+		t.Fatalf("prey behind a rock should be hidden, got sector 0 = %v", blocked[0])
+	}
+	if clear := build(false); clear[0] <= 0 {
+		t.Fatal("prey in the open should be visible in sector 0")
+	}
+}
+
 // TestDayNightShrinksVision checks an agent perceives a distant neighbour by day
 // but not at night, when effective vision contracts.
 func TestDayNightShrinksVision(t *testing.T) {

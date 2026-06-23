@@ -120,8 +120,9 @@ and time-varying pressure (all tunable in the config, set to 0 to disable):
   caution, memory, and signalling. The background dims at night and the HUD shows
   the current `season`/`light` levels.
 - **Terrain** — `obstacles` impassable rocks are scattered at world start; agents
-  can't move into them (but can always escape if pushed in), carving the plain into
-  spaces to navigate.
+  can't move into them (but can always escape if pushed in), and rocks **block line
+  of sight** (sight only — sound still carries), creating blind corners and ambush
+  spots, carving the plain into spaces to navigate.
 - **Multiple food types** — plants come in two types (different colours). Herbivores
   evolve a **`Diet`** trait that sets which type they digest efficiently; they
   perceive food weighted by edibility and gain little from a mismatched plant, so

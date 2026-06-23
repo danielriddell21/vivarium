@@ -199,6 +199,9 @@ func (a *Agent) see(w *World, p geom.Vec2, sectors []float64, weight, radius flo
 	if dist == 0 || dist > radius {
 		return
 	}
+	if w.occluded(a.Pos, d) {
+		return // terrain blocks the line of sight
+	}
 	sec := a.sectorOf(d)
 	if prox := (1 - dist/radius) * weight; prox > sectors[sec] {
 		sectors[sec] = prox
