@@ -238,6 +238,34 @@ func (b *Brain) Clone() *Brain {
 	}
 }
 
+// CrossoverWith returns a child brain whose GENOME is a uniform (per-weight) mix
+// of this brain's and other's genomes — each weight inherited at random from one
+// parent. The child's live weights start as a copy of that genome and its memory
+// is blank. Both parents must share the same layer sizes.
+func (b *Brain) CrossoverWith(rng *rand.Rand, other *Brain) *Brain {
+	g := newWeights(b.In, b.Hidden, b.Out)
+	mix := func(dst, x, y []float64) {
+		for i := range dst {
+			if rng.Float64() < 0.5 {
+				dst[i] = x[i]
+			} else {
+				dst[i] = y[i]
+			}
+		}
+	}
+	mix(g.WIH, b.genome.WIH, other.genome.WIH)
+	mix(g.WCH, b.genome.WCH, other.genome.WCH)
+	mix(g.BH, b.genome.BH, other.genome.BH)
+	mix(g.WHO, b.genome.WHO, other.genome.WHO)
+	mix(g.BO, b.genome.BO, other.genome.BO)
+	return &Brain{
+		In: b.In, Hidden: b.Hidden, Out: b.Out,
+		genome: g,
+		live:   g.clone(),
+		state:  make([]float64, b.Hidden),
+	}
+}
+
 // Mutate perturbs the genome in place (each weight, with probability rate, nudged
 // by Gaussian noise scaled by std) and resets the live weights to match. This is
 // the sole mechanism by which inherited behaviour changes between generations.

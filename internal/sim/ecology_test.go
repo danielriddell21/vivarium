@@ -139,3 +139,29 @@ func TestDayNightShrinksVision(t *testing.T) {
 		t.Fatal("noon should be brighter than midnight")
 	}
 }
+
+// TestFindMate checks mate selection: a nearby mature same-kind agent qualifies,
+// while a different species, an immature agent, or one out of range does not.
+func TestFindMate(t *testing.T) {
+	w := &World{W: 500, H: 500, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
+	w.params.MateRadius = 50
+	seeker := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
+	mate := w.newAgent(Herbivore, geom2(120, 100), nil, Traits{}, 0)  // valid: same kind, in range
+	carn := w.newAgent(Carnivore, geom2(110, 100), nil, Traits{}, 0)  // wrong kind
+	young := w.newAgent(Herbivore, geom2(105, 100), nil, Traits{}, 0) // immature
+	young.ReproCooldown = 30
+	far := w.newAgent(Herbivore, geom2(300, 100), nil, Traits{}, 0) // out of range
+	w.Agents = []*Agent{seeker, mate, carn, young, far}
+	w.reindex()
+
+	if got := w.findMate(seeker); got != mate {
+		t.Fatalf("expected the valid same-kind mature in-range mate, got %+v", got)
+	}
+
+	// With no valid partner, findMate returns nil (reproduction falls back to clone).
+	w.Agents = []*Agent{seeker, carn, young, far}
+	w.reindex()
+	if got := w.findMate(seeker); got != nil {
+		t.Fatalf("expected no mate, got #%d", got.ID)
+	}
+}

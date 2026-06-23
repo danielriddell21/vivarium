@@ -56,6 +56,12 @@ type Params struct {
 	// radius retained at the darkest point of night.
 	DayLength   int     `json:"dayLength"`
 	NightVision float64 `json:"nightVision"`
+
+	// Reproduction mode. When Sexual is true, a breeding agent that finds a mature
+	// same-kind partner within MateRadius produces offspring by crossing the two
+	// genomes; with no mate nearby it falls back to asexual cloning.
+	Sexual     bool    `json:"sexual"`
+	MateRadius float64 `json:"mateRadius"`
 }
 
 // DefaultParams returns the balanced defaults the simulation was tuned with.
@@ -71,6 +77,7 @@ func DefaultParams() Params {
 		RescueChance: 0.05,
 		SeasonLength: 3000, SeasonAmplitude: 0.6,
 		DayLength: 1200, NightVision: 0.45,
+		Sexual: true, MateRadius: 45,
 	}
 }
 

@@ -14,6 +14,25 @@ type Traits struct {
 	Diet        float64 // dietary preference 0..1 across food types (herbivores)
 }
 
+// crossover combines two parents' traits, inheriting each trait at random from one
+// parent (uniform crossover), to pair with sexual genome crossover.
+func (t Traits) crossover(rng *rand.Rand, o Traits) Traits {
+	pick := func(a, b float64) float64 {
+		if rng.Float64() < 0.5 {
+			return a
+		}
+		return b
+	}
+	return Traits{
+		Size:        pick(t.Size, o.Size),
+		MaxSpeed:    pick(t.MaxSpeed, o.MaxSpeed),
+		SenseRadius: pick(t.SenseRadius, o.SenseRadius),
+		Plasticity:  pick(t.Plasticity, o.Plasticity),
+		Curiosity:   pick(t.Curiosity, o.Curiosity),
+		Diet:        pick(t.Diet, o.Diet),
+	}
+}
+
 // edibility returns how efficiently a herbivore with the given Diet digests food
 // of foodType: 1.0 for a perfect match, falling to 0 at the opposite preference.
 func edibility(diet float64, foodType int) float64 {

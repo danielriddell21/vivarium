@@ -42,9 +42,13 @@ normalised energy. Three channels × 6 sectors + 1 = 19 inputs.
 ## Evolution
 
 When an agent's energy crosses a threshold it reproduces, splitting its energy with
-an offspring. The child inherits a **clone of the parent's genome (brain weights)
-with small Gaussian mutations**, and its traits — **size, max speed, sense radius,
-and learning rate** — co-evolve via the same mutate-on-inherit rule. Over
+an offspring whose genome (brain weights) and traits — **size, max speed, sense
+radius, learning rate, curiosity, diet** — are inherited with small Gaussian
+mutations. Reproduction is **sexual** by default (`sexual`): a breeding agent that
+finds a mature same-kind partner within `mateRadius` produces a child by **uniform
+crossover** of the two parents' genomes and traits (each gene/trait drawn at random
+from one parent); with no mate nearby it falls back to asexual cloning. Only the
+initiating parent pays the energy cost, so the energy economy is unchanged. Over
 generations the population drifts toward viable strategies: foraging, seeking, and
 fleeing.
 

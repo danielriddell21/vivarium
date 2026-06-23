@@ -307,15 +307,45 @@ func (w *World) resolveEat(a *Agent) {
 	}
 }
 
-// reproduce spawns a mutated offspring next to the parent and splits the
-// parent's energy with it.
+// findMate returns the nearest mature same-kind agent within mating range of a,
+// or nil if there is none — the partner for sexual reproduction.
+func (w *World) findMate(a *Agent) *Agent {
+	var best *Agent
+	bestD := w.params.MateRadius
+	w.grid.forEachAgentNear(a.Pos, w.params.MateRadius, func(o *Agent) {
+		if !o.Alive || o.Kind != a.Kind || o.ID == a.ID || o.ReproCooldown > 0 {
+			return
+		}
+		if d := a.Pos.ToroidalDist(o.Pos, w.W, w.H); d <= bestD {
+			bestD, best = d, o
+		}
+	})
+	return best
+}
+
+// reproduce spawns a mutated offspring next to the parent and splits the parent's
+// energy with it. With sexual reproduction enabled and a mate nearby, the child's
+// genome and traits are a crossover of both parents; otherwise it is an asexual
+// clone of the initiating parent. Only the initiating parent pays the energy cost,
+// so the energy economy is unchanged either way.
 func (w *World) reproduce(parent *Agent) *Agent {
 	child := parent.Energy / 2
 	parent.Energy -= child
 
-	brain := parent.Brain.Clone()
+	var brain *neural.Brain
+	var traits Traits
+	if w.params.Sexual {
+		if mate := w.findMate(parent); mate != nil {
+			brain = parent.Brain.CrossoverWith(w.rng, mate.Brain)
+			traits = parent.Traits.crossover(w.rng, mate.Traits)
+		}
+	}
+	if brain == nil { // asexual fallback (sexual disabled or no mate found)
+		brain = parent.Brain.Clone()
+		traits = parent.Traits
+	}
 	brain.Mutate(w.rng, w.params.MutationRate, w.params.MutationStd)
-	traits := parent.Traits.mutated(w.rng)
+	traits = traits.mutated(w.rng)
 
 	parent.ReproCooldown = w.gestation(parent.Kind)
 
