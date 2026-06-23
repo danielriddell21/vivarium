@@ -202,6 +202,34 @@ func (b *Brain) Genome() []float64 {
 	return g
 }
 
+// FromGenome rebuilds a brain of the given layer sizes from a flat genome produced
+// by Genome (same field order). The live weights start as a copy of the genome and
+// the memory is blank. It returns nil if the genome length does not match the
+// requested dimensions.
+func FromGenome(in, hidden, out int, genome []float64) *Brain {
+	g := newWeights(in, hidden, out)
+	need := len(g.WIH) + len(g.WCH) + len(g.BH) + len(g.WHO) + len(g.BO)
+	if len(genome) != need {
+		return nil
+	}
+	off := 0
+	take := func(dst []float64) {
+		copy(dst, genome[off:off+len(dst)])
+		off += len(dst)
+	}
+	take(g.WIH)
+	take(g.WCH)
+	take(g.BH)
+	take(g.WHO)
+	take(g.BO)
+	return &Brain{
+		In: in, Hidden: hidden, Out: out,
+		genome: g,
+		live:   g.clone(),
+		state:  make([]float64, hidden),
+	}
+}
+
 // LearnedDrift reports the mean absolute difference between the live weights and
 // the genome — i.e. how far in-lifetime learning has moved the phenotype away from
 // the inherited starting point. It is 0 at birth and for non-plastic agents.

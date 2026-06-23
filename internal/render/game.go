@@ -47,6 +47,12 @@ type Game struct {
 	// drawn into before being blitted through the camera transform.
 	cam      camera
 	worldImg *ebiten.Image
+
+	// SnapshotPath is where the 's' key writes the population; saveMsg/saveMsgTTL
+	// drive a brief on-screen confirmation.
+	SnapshotPath string
+	saveMsg      string
+	saveMsgTTL   int
 }
 
 // NewGame returns a Game ready to be passed to ebiten.RunGame.
@@ -98,6 +104,17 @@ func (g *Game) handleInput() {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
 		g.hideSignals = !g.hideSignals
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) && g.SnapshotPath != "" {
+		if err := sim.SaveSnapshot(g.SnapshotPath, g.World.Snapshot()); err != nil {
+			g.saveMsg = "save failed: " + err.Error()
+		} else {
+			g.saveMsg = "saved population to " + g.SnapshotPath
+		}
+		g.saveMsgTTL = 180 // ~3s at 60fps
+	}
+	if g.saveMsgTTL > 0 {
+		g.saveMsgTTL--
 	}
 
 	// Camera: mouse wheel zooms toward the cursor, arrow keys pan, 0 resets.
