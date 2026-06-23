@@ -25,11 +25,13 @@ Brain
 Evolution
 
 	When an agent's energy crosses a threshold it reproduces, splitting its energy
-	with an offspring that inherits a CLONE of the parent's genome (brain weights)
-	with small Gaussian mutations. Morphological traits (size, max speed, sense
-	radius) and a learning rate co-evolve via the same mutate-on-inherit rule. Over
-	generations the population drifts toward viable strategies (foraging, seeking,
-	fleeing).
+	with an offspring whose genome (brain weights) and traits are inherited with
+	small Gaussian mutations. Reproduction is sexual by default: with a mature
+	same-kind mate nearby the child is a uniform crossover of both parents' genomes
+	and traits, otherwise an asexual clone. Traits (size, max speed, sense radius,
+	learning rate, curiosity, diet) co-evolve via the same mutate-on-inherit rule.
+	Over generations the population drifts toward viable strategies (foraging,
+	seeking, fleeing).
 
 In-lifetime learning
 

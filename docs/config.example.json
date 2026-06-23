@@ -36,6 +36,8 @@
     "seasonLength": 3000,
     "seasonAmplitude": 0.6,
     "dayLength": 1200,
-    "nightVision": 0.45
+    "nightVision": 0.45,
+    "sexual": true,
+    "mateRadius": 45
   }
 }

@@ -178,6 +178,34 @@ func TestLearnReinforcesOutput(t *testing.T) {
 	}
 }
 
+// TestCrossoverMixesParents checks each child genome weight comes from one parent
+// and the child starts unlearned (live == genome).
+func TestCrossoverMixesParents(t *testing.T) {
+	rng := rand.New(rand.NewSource(1))
+	a := New(rng, 4, 4, 2)
+	b := New(rng, 4, 4, 2)
+	child := a.CrossoverWith(rng, b)
+
+	if child.LearnedDrift() != 0 {
+		t.Fatal("a fresh child should have live == genome (no learning)")
+	}
+	for i := range child.genome.WIH {
+		if child.genome.WIH[i] != a.genome.WIH[i] && child.genome.WIH[i] != b.genome.WIH[i] {
+			t.Fatalf("child gene %d (%v) came from neither parent (%v / %v)", i, child.genome.WIH[i], a.genome.WIH[i], b.genome.WIH[i])
+		}
+	}
+	// With random parents, at least some genes should differ from parent a.
+	diff := 0
+	for i := range child.genome.WIH {
+		if child.genome.WIH[i] != a.genome.WIH[i] {
+			diff++
+		}
+	}
+	if diff == 0 {
+		t.Fatal("child should inherit some genes from the other parent")
+	}
+}
+
 // TestCloneInheritsGenomeNotLearning confirms Baldwinian inheritance: a child
 // starts from the parent's genome, not its learned live weights.
 func TestCloneInheritsGenomeNotLearning(t *testing.T) {
