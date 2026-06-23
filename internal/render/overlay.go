@@ -24,7 +24,10 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	drawText(screen, fmt.Sprintf("carnivores %d", c.Carnivores), 12, 58, colCarnivore)
 	drawText(screen, fmt.Sprintf("season x%.2f   light x%.2f", g.World.SeasonFactor(), g.World.LightFactor()), 12, 74, colText)
 	drawText(screen, "space pause  +/- speed  click select  g/l/p views  h halos", 12, 90, colText)
-	drawText(screen, "wheel zoom  arrows pan  0 reset", 12, 106, colText)
+	drawText(screen, "wheel zoom  arrows pan  0 reset  s save", 12, 106, colText)
+	if g.saveMsgTTL > 0 {
+		drawText(screen, g.saveMsg, 12, 128, colSelected)
+	}
 }
 
 // graph geometry (bottom-left).

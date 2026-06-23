@@ -178,6 +178,28 @@ func TestLearnReinforcesOutput(t *testing.T) {
 	}
 }
 
+// TestFromGenomeRoundTrip checks a brain rebuilt from its genome reproduces the
+// original's response from a blank memory.
+func TestFromGenomeRoundTrip(t *testing.T) {
+	b := New(rand.New(rand.NewSource(4)), 7, 8, 3)
+	in := []float64{0.2, -0.1, 0.5, 0.9, -0.3, 0.0, 0.7}
+	want := b.Forward(in) // from blank state
+
+	rebuilt := FromGenome(7, 8, 3, b.Genome())
+	if rebuilt == nil {
+		t.Fatal("FromGenome returned nil for a matching-length genome")
+	}
+	got := rebuilt.Forward(in)
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("rebuilt output %d = %v, want %v", i, got[i], want[i])
+		}
+	}
+	if FromGenome(7, 8, 3, []float64{1, 2, 3}) != nil {
+		t.Fatal("FromGenome should reject a wrong-length genome")
+	}
+}
+
 // TestCrossoverMixesParents checks each child genome weight comes from one parent
 // and the child starts unlearned (live == genome).
 func TestCrossoverMixesParents(t *testing.T) {

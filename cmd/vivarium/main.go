@@ -112,6 +112,8 @@ func main() {
 	rescue := flag.Bool("rescue", cfg.Rescue, "rescue effect: immigrants arrive when a tier nears extinction")
 	configPath := flag.String("config", "", "path to a JSON config file overriding defaults (see -print-config)")
 	printConfig := flag.Bool("print-config", false, "print the default config as JSON and exit")
+	loadPath := flag.String("load", "", "load a saved population snapshot instead of a fresh world")
+	snapPath := flag.String("snapshot", "vivarium-snapshot.json", "file the 's' key saves the population to")
 	flag.Parse()
 
 	if *printConfig {
@@ -152,8 +154,19 @@ func main() {
 	}
 
 	rng := rand.New(rand.NewSource(*seed))
-	world := sim.NewWorld(rng, cfg)
+	var world *sim.World
+	if *loadPath != "" {
+		snap, err := sim.LoadSnapshotFile(*loadPath)
+		if err != nil {
+			log.Fatalf("load snapshot: %v", err)
+		}
+		world = sim.NewWorldFromSnapshot(rng, snap)
+		cfg.Width, cfg.Height = world.W, world.H
+	} else {
+		world = sim.NewWorld(rng, cfg)
+	}
 	game := render.NewGame(world)
+	game.SnapshotPath = *snapPath
 
 	ebiten.SetWindowSize(int(cfg.Width), int(cfg.Height))
 	ebiten.SetWindowTitle("Vivarium — evolving ecosystem")

@@ -38,6 +38,8 @@ func main() {
 	width := flag.Float64("width", cfg.Width, "world width")
 	height := flag.Float64("height", cfg.Height, "world height")
 	rescue := flag.Bool("rescue", cfg.Rescue, "rescue effect on/off")
+	loadPath := flag.String("load", "", "start from a saved population snapshot")
+	savePath := flag.String("save", "", "write the final population snapshot to this file")
 	flag.Parse()
 
 	if *printConfig {
@@ -77,7 +79,17 @@ func main() {
 		cfg.TargetPlants = cfg.Plants
 	}
 
-	w := sim.NewWorld(rand.New(rand.NewSource(*seed)), cfg)
+	rng := rand.New(rand.NewSource(*seed))
+	var w *sim.World
+	if *loadPath != "" {
+		snap, err := sim.LoadSnapshotFile(*loadPath)
+		if err != nil {
+			log.Fatalf("load snapshot: %v", err)
+		}
+		w = sim.NewWorldFromSnapshot(rng, snap)
+	} else {
+		w = sim.NewWorld(rng, cfg)
+	}
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
 	fmt.Fprintln(out, "tick,plants,herbivores,carnivores,meanGen,maxGen,meanSize,meanSpeed,meanSense,meanPlast,meanCurio,meanDrift,lineages")
@@ -86,6 +98,13 @@ func main() {
 			writeStats(out, w, t)
 		}
 		w.Step()
+	}
+	if *savePath != "" {
+		out.Flush()
+		if err := sim.SaveSnapshot(*savePath, w.Snapshot()); err != nil {
+			log.Fatalf("save snapshot: %v", err)
+		}
+		fmt.Fprintf(os.Stderr, "saved population (%d agents) to %s\n", len(w.Snapshot().Agents), *savePath)
 	}
 }
 

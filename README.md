@@ -144,6 +144,7 @@ and time-varying pressure (all tunable in the config, set to 0 to disable):
 | `l` | toggle the **lineage view** (lineage colouring + abundance-over-time chart) |
 | `p` | toggle the **phylogeny view** (coalescent genealogy tree of the living population) |
 | `h` | toggle the communication **halos** around broadcasting agents |
+| `s` | save the current population to a snapshot file |
 | mouse wheel | zoom the camera toward the cursor |
 | arrow keys | pan the camera |
 | `0` | reset the camera (whole world, no zoom) |
@@ -215,6 +216,24 @@ For larger worlds the per-tick cost is dominated by each agent's vision + neural
 nets, which is read-only on shared state; that phase runs **in parallel across CPU
 cores** (with the movement/eating phase kept sequential for deterministic results),
 so big populations step several times faster on a multi-core machine.
+
+### Saving & loading populations
+
+An evolved population can be snapshotted to a JSON file (genomes, traits, terrain,
+genealogy) and reloaded to seed a new run — resume a long experiment, share an
+interesting population, or branch off variants:
+
+```sh
+go run ./cmd/vivarium-headless -ticks 50000 -save evolved.json   # run, then save
+go run ./cmd/vivarium-headless -load evolved.json -ticks 20000   # continue evolving
+go run ./cmd/vivarium -load evolved.json                         # explore it in the GUI
+```
+
+In the GUI, press `s` to save the current population (to `-snapshot`'s path,
+default `vivarium-snapshot.json`). Loading reconstructs every brain from its saved
+genome and preserves generation/lineage, so the analytics views stay coherent.
+Loading isn't a bit-exact resume — the RNG stream and learned (in-life) state are
+not stored — but the heritable population is reproduced exactly.
 
 ### Flags
 
