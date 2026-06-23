@@ -35,12 +35,14 @@ var whiteImage = func() *ebiten.Image {
 	return img
 }()
 
-// Draw renders one frame: world first, then overlays.
+// Draw renders one frame: the world (through the pan/zoom camera) then the
+// screen-space overlays.
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(nightTint(g.World.LightFactor()))
+	world := g.ensureWorldImg()
+	world.Fill(nightTint(g.World.LightFactor()))
 
 	for _, o := range g.World.Obstacles() {
-		vector.DrawFilledCircle(screen, float32(o.Pos.X), float32(o.Pos.Y), float32(o.Radius), colObstacle, true)
+		vector.DrawFilledCircle(world, float32(o.Pos.X), float32(o.Pos.Y), float32(o.Radius), colObstacle, true)
 	}
 
 	for _, f := range g.World.Foods {
@@ -51,15 +53,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if f.Type == 1 {
 			clr = colFood2
 		}
-		vector.DrawFilledCircle(screen, float32(f.Pos.X), float32(f.Pos.Y), 2, clr, false)
+		vector.DrawFilledCircle(world, float32(f.Pos.X), float32(f.Pos.Y), 2, clr, false)
 	}
 
 	for _, a := range g.World.Agents {
 		if !a.Alive {
 			continue
 		}
-		drawAgent(screen, a, a == g.Selected, g.agentBodyColor(a), !g.hideSignals)
+		drawAgent(world, a, a == g.Selected, g.agentBodyColor(a), !g.hideSignals)
 	}
+
+	// Blit the world through the camera, then draw overlays in screen space.
+	screen.Fill(colBackground)
+	op := &ebiten.DrawImageOptions{GeoM: g.cam.geoM()}
+	screen.DrawImage(world, op)
 
 	g.drawGraph(screen)
 	g.drawHUD(screen)
@@ -73,6 +80,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.phyloOn {
 		g.drawPhylogenyPanel(screen)
 	}
+}
+
+// ensureWorldImg lazily creates the offscreen world buffer at world resolution.
+func (g *Game) ensureWorldImg() *ebiten.Image {
+	if g.worldImg == nil {
+		g.worldImg = ebiten.NewImage(int(g.World.W), int(g.World.H))
+	}
+	return g.worldImg
 }
 
 // drawAgent renders one agent. override, when non-nil, replaces the default

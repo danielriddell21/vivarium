@@ -42,11 +42,16 @@ type Game struct {
 
 	// hideSignals suppresses the communication halos drawn around agents.
 	hideSignals bool
+
+	// cam pans/zooms the world view; worldImg is the offscreen buffer the world is
+	// drawn into before being blitted through the camera transform.
+	cam      camera
+	worldImg *ebiten.Image
 }
 
 // NewGame returns a Game ready to be passed to ebiten.RunGame.
 func NewGame(w *sim.World) *Game {
-	return &Game{World: w, Speed: 1}
+	return &Game{World: w, Speed: 1, cam: newCamera()}
 }
 
 // Update handles input and advances the simulation.
@@ -95,9 +100,35 @@ func (g *Game) handleInput() {
 		g.hideSignals = !g.hideSignals
 	}
 
+	// Camera: mouse wheel zooms toward the cursor, arrow keys pan, 0 resets.
+	mx, my := ebiten.CursorPosition()
+	if _, wy := ebiten.Wheel(); wy != 0 {
+		factor := 1.1
+		if wy < 0 {
+			factor = 1 / 1.1
+		}
+		g.cam.zoomAt(factor, float64(mx), float64(my), g.World.W, g.World.H)
+	}
+	const panStep = 12
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		g.cam.pan(-panStep, 0, g.World.W, g.World.H)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		g.cam.pan(panStep, 0, g.World.W, g.World.H)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		g.cam.pan(0, -panStep, g.World.W, g.World.H)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		g.cam.pan(0, panStep, g.World.W, g.World.H)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key0) {
+		g.cam = newCamera()
+	}
+
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		mx, my := ebiten.CursorPosition()
-		g.Selected = g.World.NearestAgent(geom.Vec2{X: float64(mx), Y: float64(my)})
+		wx, wy := g.cam.screenToWorld(float64(mx), float64(my))
+		g.Selected = g.World.NearestAgent(geom.Vec2{X: wx, Y: wy})
 	}
 
 	// Refresh the species analysis on a throttle while the view is on.

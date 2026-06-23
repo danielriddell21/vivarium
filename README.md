@@ -139,6 +139,9 @@ and time-varying pressure (all tunable in the config, set to 0 to disable):
 | `l` | toggle the **lineage view** (lineage colouring + abundance-over-time chart) |
 | `p` | toggle the **phylogeny view** (coalescent genealogy tree of the living population) |
 | `h` | toggle the communication **halos** around broadcasting agents |
+| mouse wheel | zoom the camera toward the cursor |
+| arrow keys | pan the camera |
+| `0` | reset the camera (whole world, no zoom) |
 
 The HUD shows run state and live counts, a line chart tracks plant/herbivore/
 carnivore counts over time, and the inspector shows a selected agent's energy, age,
