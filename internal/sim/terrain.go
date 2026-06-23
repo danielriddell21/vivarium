@@ -46,3 +46,32 @@ func (w *World) resolveMove(cur, proposed geom.Vec2, size float64) geom.Vec2 {
 	}
 	return proposed
 }
+
+// occluded reports whether the line of sight from an observer to a target — given
+// as the shortest delta vector from observer to target — is blocked by terrain.
+// An obstacle blocks only if the segment passes through it strictly between the
+// two endpoints, so terrain at or beyond the target (or behind the observer) does
+// not occlude.
+func (w *World) occluded(from geom.Vec2, delta geom.Vec2) bool {
+	if len(w.obstacles) == 0 {
+		return false
+	}
+	l2 := delta.X*delta.X + delta.Y*delta.Y
+	if l2 == 0 {
+		return false
+	}
+	for i := range w.obstacles {
+		o := &w.obstacles[i]
+		c := from.ShortestDelta(o.Pos, w.W, w.H) // obstacle centre relative to observer
+		t := (c.X*delta.X + c.Y*delta.Y) / l2
+		if t <= 0 || t >= 1 {
+			continue // closest approach is not between observer and target
+		}
+		dx := delta.X*t - c.X
+		dy := delta.Y*t - c.Y
+		if dx*dx+dy*dy < o.Radius*o.Radius {
+			return true
+		}
+	}
+	return false
+}
