@@ -16,13 +16,15 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	if g.Paused {
 		state = "PAUSED"
 	}
-	drawPanel(screen, 6, 6, 300, 86)
+	drawPanel(screen, 6, 6, 320, 120)
 	drawText(screen, fmt.Sprintf("%s   speed x%d   tick %d", state, g.Speed, g.World.Tick), 12, 10, colText)
-	drawText(screen, fmt.Sprintf("plants %d", c.Plants), 12, 26, colFood)
-	drawText(screen, fmt.Sprintf("herbivores %d", c.Herbivores), 100, 26, colHerbivore)
-	drawText(screen, fmt.Sprintf("carnivores %d", c.Carnivores), 12, 42, colCarnivore)
-	drawText(screen, fmt.Sprintf("season x%.2f   light x%.2f", g.World.SeasonFactor(), g.World.LightFactor()), 12, 58, colText)
-	drawText(screen, "space pause  +/- speed  click  g/l/p views  h halos", 12, 74, colText)
+	drawText(screen, fmt.Sprintf("fps %.0f   tps %.0f   zoom x%.1f", ebiten.ActualFPS(), ebiten.ActualTPS(), g.cam.zoom), 12, 26, colText)
+	drawText(screen, fmt.Sprintf("plants %d", c.Plants), 12, 42, colFood)
+	drawText(screen, fmt.Sprintf("herbivores %d", c.Herbivores), 100, 42, colHerbivore)
+	drawText(screen, fmt.Sprintf("carnivores %d", c.Carnivores), 12, 58, colCarnivore)
+	drawText(screen, fmt.Sprintf("season x%.2f   light x%.2f", g.World.SeasonFactor(), g.World.LightFactor()), 12, 74, colText)
+	drawText(screen, "space pause  +/- speed  click select  g/l/p views  h halos", 12, 90, colText)
+	drawText(screen, "wheel zoom  arrows pan  0 reset", 12, 106, colText)
 }
 
 // graph geometry (bottom-left).
