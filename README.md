@@ -40,7 +40,7 @@ go run ./cmd/vivarium --seed 42    # reproducible run
 > On Linux you need the usual Ebiten build dependencies (OpenGL + X11 dev headers,
 > e.g. `libgl1-mesa-dev xorg-dev libxxf86vm-dev libasound2-dev`).
 
-All randomness comes from a single seeded generator, so a given `-seed` reproduces
+All randomness comes from a single seeded generator, so a given `--seed` reproduces
 the same run exactly.
 
 ## Controls
@@ -57,8 +57,8 @@ the same run exactly.
 
 ## Configuration
 
-The population/size flags (`-plants`, `-herbivores`, `-carnivores`, `-width`,
-`-height`, `-rescue`, `-seed`) cover the basics. The ecological, metabolic, and
+The population/size flags (`--plants`, `--herbivores`, `--carnivores`, `--width`,
+`--height`, `--rescue`, `--seed`) cover the basics. The ecological, metabolic, and
 learning scalars are exposed as a **JSON config** so a run can be tuned without
 recompiling:
 
@@ -96,6 +96,11 @@ internal/render        Ebiten game loop, drawing, overlays, input
 
 `geom`, `neural`, `sim`, and `analytics` are pure Go with no Ebiten dependency, so
 the simulation core is unit-testable headlessly: `go test ./...`.
+
+## Documentation
+
+- [Demos](docs/demos.md)
+- [Example config](docs/config.example.json)
 
 ## Related work
 
