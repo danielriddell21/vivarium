@@ -44,8 +44,6 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      # Headless build only; the Ebiten GUI is gated behind the "ebiten" tag so
-      # CI needs no graphics or cgo dependencies.
       - run: go build ./...
 
   mutate:
