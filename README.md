@@ -29,7 +29,7 @@ screenshots.**
 
 ```sh
 go run ./cmd/vivarium             # run the GUI
-go run ./cmd/vivarium -seed 42    # reproducible run
+go run ./cmd/vivarium --seed 42    # reproducible run
 ```
 
 > On Linux you need the usual Ebiten build dependencies (OpenGL + X11 dev headers,
@@ -58,8 +58,8 @@ learning scalars are exposed as a **JSON config** so a run can be tuned without
 recompiling:
 
 ```sh
-go run ./cmd/vivarium-headless -print-config > myconfig.json   # template (display-free)
-go run ./cmd/vivarium -config myconfig.json
+go run ./cmd/vivarium-headless --print-config > myconfig.json   # template (display-free)
+go run ./cmd/vivarium --config myconfig.json
 ```
 
 Config files may be partial (unspecified fields keep their defaults); the full
@@ -72,9 +72,9 @@ streams CSV statistics — ideal for long offline experiments. Populations can b
 saved to disk and reloaded to resume, share, or seed runs:
 
 ```sh
-go run ./cmd/vivarium-headless -ticks 50000 -every 200 -save evolved.json > run.csv
-go run ./cmd/vivarium-headless -load evolved.json -ticks 20000               # continue
-go run ./cmd/vivarium -load evolved.json                                     # open in the GUI
+go run ./cmd/vivarium-headless --ticks 50000 --every 200 --save evolved.json > run.csv
+go run ./cmd/vivarium-headless --load evolved.json --ticks 20000               # continue
+go run ./cmd/vivarium --load evolved.json                                     # open in the GUI
 ```
 
 ## Project layout
