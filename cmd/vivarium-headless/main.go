@@ -16,67 +16,134 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
+// version is the build version, overridden at release time via
+// -ldflags "-X main.version=...". It defaults to "dev" for local builds.
+var version = "dev"
+
 func main() {
-	if err := run(); err != nil {
+	if err := Execute(version); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run() error {
+// Execute builds and runs the root command. Returns non-nil on error.
+func Execute(version string) error {
 	cfg := sim.DefaultConfig()
-	seed := flag.Int64("seed", 1, "random seed for reproducible runs")
-	ticks := flag.Int("ticks", 10000, "number of ticks to simulate")
-	every := flag.Int("every", 200, "emit a stats row every N ticks")
-	configPath := flag.String("config", "", "path to a JSON config file overriding defaults")
-	printConfig := flag.Bool("print-config", false, "print the default config as JSON and exit")
-	plants := flag.Int("plants", cfg.Plants, "initial plant count")
-	herbivores := flag.Int("herbivores", cfg.Herbivores, "initial herbivore count")
-	carnivores := flag.Int("carnivores", cfg.Carnivores, "initial carnivore count")
-	width := flag.Float64("width", cfg.Width, "world width")
-	height := flag.Float64("height", cfg.Height, "world height")
-	rescue := flag.Bool("rescue", cfg.Rescue, "rescue effect on/off")
-	loadPath := flag.String("load", "", "start from a saved population snapshot")
-	savePath := flag.String("save", "", "write the final population snapshot to this file")
-	flag.Parse()
+	var (
+		seed                           int64
+		ticks, every                   int
+		configPath                     string
+		printConfig                    bool
+		plants, herbivores, carnivores int
+		width, height                  float64
+		rescue                         bool
+		loadPath, savePath             string
+	)
 
-	if *printConfig {
-		return printDefaultConfig()
+	root := &cobra.Command{
+		Use:           "vivarium-headless",
+		Short:         "Headless batch runner for the Vivarium ecosystem simulation",
+		Long:          "vivarium-headless advances the ecosystem simulation without a GUI and emits CSV population/trait statistics, for long offline experiments and reproducible batch runs.",
+		Version:       version,
+		Args:          cobra.NoArgs,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if printConfig {
+				return printDefaultConfig()
+			}
+			resolved, err := resolveConfig(cmd.Flags(), cfg, ov{
+				configPath: configPath,
+				plants:     plants, herbivores: herbivores, carnivores: carnivores,
+				width: width, height: height, rescue: rescue,
+			})
+			if err != nil {
+				return err
+			}
+			w, err := buildWorld(rand.New(rand.NewSource(seed)), resolved, loadPath)
+			if err != nil {
+				return err
+			}
+			if err := simulate(w, ticks, every); err != nil {
+				return err
+			}
+			return saveFinal(w, savePath)
+		},
 	}
 
-	// Precedence: defaults < config file < explicitly-set flags.
-	if *configPath != "" {
-		c, err := sim.LoadConfig(*configPath)
+	f := root.Flags()
+	f.Int64Var(&seed, "seed", 1, "random seed for reproducible runs")
+	f.IntVar(&ticks, "ticks", 10000, "number of ticks to simulate")
+	f.IntVar(&every, "every", 200, "emit a stats row every N ticks")
+	f.StringVar(&configPath, "config", "", "path to a JSON config file overriding defaults")
+	f.BoolVar(&printConfig, "print-config", false, "print the default config as JSON and exit")
+	f.IntVar(&plants, "plants", cfg.Plants, "initial plant count")
+	f.IntVar(&herbivores, "herbivores", cfg.Herbivores, "initial herbivore count")
+	f.IntVar(&carnivores, "carnivores", cfg.Carnivores, "initial carnivore count")
+	f.Float64Var(&width, "width", cfg.Width, "world width")
+	f.Float64Var(&height, "height", cfg.Height, "world height")
+	f.BoolVar(&rescue, "rescue", cfg.Rescue, "rescue effect on/off")
+	f.StringVar(&loadPath, "load", "", "start from a saved population snapshot")
+	f.StringVar(&savePath, "save", "", "write the final population snapshot to this file")
+
+	root.AddCommand(completionCmd())
+
+	if err := root.Execute(); err != nil {
+		return fmt.Errorf("vivarium-headless: %w", err)
+	}
+	return nil
+}
+
+// ov bundles the flag values that can override the config when set explicitly.
+type ov struct {
+	configPath                     string
+	plants, herbivores, carnivores int
+	width, height                  float64
+	rescue                         bool
+}
+
+// resolveConfig applies precedence defaults < config file < explicitly-set flags.
+func resolveConfig(fl *pflag.FlagSet, cfg sim.Config, o ov) (sim.Config, error) {
+	if o.configPath != "" {
+		c, err := sim.LoadConfig(o.configPath)
 		if err != nil {
-			return fmt.Errorf("load config: %w", err)
+			return cfg, fmt.Errorf("load config: %w", err)
 		}
 		cfg = c
 	}
-	applyFlagOverrides(&cfg, overrides{
-		plants: plants, herbivores: herbivores, carnivores: carnivores,
-		width: width, height: height, rescue: rescue,
-	})
+	if fl.Changed("plants") {
+		cfg.Plants = o.plants
+	}
+	if fl.Changed("herbivores") {
+		cfg.Herbivores = o.herbivores
+	}
+	if fl.Changed("carnivores") {
+		cfg.Carnivores = o.carnivores
+	}
+	if fl.Changed("width") {
+		cfg.Width = o.width
+	}
+	if fl.Changed("height") {
+		cfg.Height = o.height
+	}
+	if fl.Changed("rescue") {
+		cfg.Rescue = o.rescue
+	}
 	if cfg.TargetPlants < cfg.Plants {
 		cfg.TargetPlants = cfg.Plants
 	}
-
-	w, err := buildWorld(rand.New(rand.NewSource(*seed)), cfg, *loadPath)
-	if err != nil {
-		return err
-	}
-
-	if err := simulate(w, *ticks, *every); err != nil {
-		return err
-	}
-	return saveFinal(w, *savePath)
+	return cfg, nil
 }
 
 // printDefaultConfig writes the default config as indented JSON to stdout.
@@ -87,33 +154,6 @@ func printDefaultConfig() error {
 		return fmt.Errorf("print config: %w", err)
 	}
 	return nil
-}
-
-// overrides bundles the flag pointers whose explicit values override the config.
-type overrides struct {
-	plants, herbivores, carnivores *int
-	width, height                  *float64
-	rescue                         *bool
-}
-
-// applyFlagOverrides copies only the explicitly-set flags onto cfg.
-func applyFlagOverrides(cfg *sim.Config, o overrides) {
-	flag.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "plants":
-			cfg.Plants = *o.plants
-		case "herbivores":
-			cfg.Herbivores = *o.herbivores
-		case "carnivores":
-			cfg.Carnivores = *o.carnivores
-		case "width":
-			cfg.Width = *o.width
-		case "height":
-			cfg.Height = *o.height
-		case "rescue":
-			cfg.Rescue = *o.rescue
-		}
-	})
 }
 
 // buildWorld constructs the world, loading from a snapshot when loadPath is set.
