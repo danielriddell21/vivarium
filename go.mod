@@ -1,6 +1,6 @@
 module github.com/danielriddell21/vivarium
 
-go 1.25.0
+go 1.26.3
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.9.9
