@@ -110,7 +110,7 @@ func TestPCAFindsPrincipalAxis(t *testing.T) {
 	if !ok {
 		t.Fatal("expected projection to succeed")
 	}
-	var min0, max0, min1, max1 = math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
+	min0, max0, min1, max1 := math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
 	for _, c := range coords {
 		min0, max0 = math.Min(min0, c[0]), math.Max(max0, c[0])
 		min1, max1 = math.Min(min1, c[1]), math.Max(max1, c[1])

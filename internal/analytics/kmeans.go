@@ -39,49 +39,59 @@ func KMeans(pts [][]float64, k, iters int, rng *rand.Rand, init [][]float64) (as
 		centroids = seedPlusPlus(pts, k, rng)
 	}
 	for it := 0; it < iters; it++ {
-		changed := false
-		// Assignment step: nearest centroid.
-		for i, p := range pts {
-			best, bestD := 0, math.Inf(1)
-			for c, cen := range centroids {
-				if d := sqDist(p, cen); d < bestD {
-					best, bestD = c, d
-				}
-			}
-			if assign[i] != best {
-				assign[i] = best
-				changed = true
-			}
-		}
-		// Update step: mean of each cluster.
-		sums := make([][]float64, k)
-		counts := make([]int, k)
-		dim := len(pts[0])
-		for c := range sums {
-			sums[c] = make([]float64, dim)
-		}
-		for i, p := range pts {
-			c := assign[i]
-			counts[c]++
-			for d := range p {
-				sums[c][d] += p[d]
-			}
-		}
-		for c := range centroids {
-			if counts[c] == 0 {
-				// Re-seed an empty cluster onto a random point to stay useful.
-				centroids[c] = append([]float64(nil), pts[rng.Intn(n)]...)
-				continue
-			}
-			for d := range sums[c] {
-				centroids[c][d] = sums[c][d] / float64(counts[c])
-			}
-		}
+		changed := assignClusters(pts, centroids, assign)
+		updateCentroids(pts, assign, centroids, k, rng)
 		if !changed && it > 0 {
 			break
 		}
 	}
 	return assign, centroids
+}
+
+// assignClusters assigns each point to its nearest centroid, returning whether
+// any assignment changed from the previous iteration.
+func assignClusters(pts, centroids [][]float64, assign []int) bool {
+	changed := false
+	for i, p := range pts {
+		best, bestD := 0, math.Inf(1)
+		for c, cen := range centroids {
+			if d := sqDist(p, cen); d < bestD {
+				best, bestD = c, d
+			}
+		}
+		if assign[i] != best {
+			assign[i] = best
+			changed = true
+		}
+	}
+	return changed
+}
+
+// updateCentroids recomputes each centroid as the mean of its assigned points.
+// An empty cluster is re-seeded onto a random point so it stays useful.
+func updateCentroids(pts [][]float64, assign []int, centroids [][]float64, k int, rng *rand.Rand) {
+	dim := len(pts[0])
+	sums := make([][]float64, k)
+	counts := make([]int, k)
+	for c := range sums {
+		sums[c] = make([]float64, dim)
+	}
+	for i, p := range pts {
+		c := assign[i]
+		counts[c]++
+		for d := range p {
+			sums[c][d] += p[d]
+		}
+	}
+	for c := range centroids {
+		if counts[c] == 0 {
+			centroids[c] = append([]float64(nil), pts[rng.Intn(len(pts))]...)
+			continue
+		}
+		for d := range sums[c] {
+			centroids[c][d] = sums[c][d] / float64(counts[c])
+		}
+	}
 }
 
 // seedPlusPlus chooses k initial centroids using the k-means++ scheme: spread

@@ -26,6 +26,12 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	cfg := sim.DefaultConfig()
 	seed := flag.Int64("seed", 1, "random seed for reproducible runs")
 	ticks := flag.Int("ticks", 10000, "number of ticks to simulate")
@@ -43,69 +49,111 @@ func main() {
 	flag.Parse()
 
 	if *printConfig {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(sim.DefaultConfig()); err != nil {
-			log.Fatal(err)
-		}
-		return
+		return printDefaultConfig()
 	}
 
 	// Precedence: defaults < config file < explicitly-set flags.
 	if *configPath != "" {
 		c, err := sim.LoadConfig(*configPath)
 		if err != nil {
-			log.Fatalf("config: %v", err)
+			return fmt.Errorf("load config: %w", err)
 		}
 		cfg = c
 	}
-	flag.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "plants":
-			cfg.Plants = *plants
-		case "herbivores":
-			cfg.Herbivores = *herbivores
-		case "carnivores":
-			cfg.Carnivores = *carnivores
-		case "width":
-			cfg.Width = *width
-		case "height":
-			cfg.Height = *height
-		case "rescue":
-			cfg.Rescue = *rescue
-		}
+	applyFlagOverrides(&cfg, overrides{
+		plants: plants, herbivores: herbivores, carnivores: carnivores,
+		width: width, height: height, rescue: rescue,
 	})
 	if cfg.TargetPlants < cfg.Plants {
 		cfg.TargetPlants = cfg.Plants
 	}
 
-	rng := rand.New(rand.NewSource(*seed))
-	var w *sim.World
-	if *loadPath != "" {
-		snap, err := sim.LoadSnapshotFile(*loadPath)
-		if err != nil {
-			log.Fatalf("load snapshot: %v", err)
-		}
-		w = sim.NewWorldFromSnapshot(rng, snap)
-	} else {
-		w = sim.NewWorld(rng, cfg)
+	w, err := buildWorld(rand.New(rand.NewSource(*seed)), cfg, *loadPath)
+	if err != nil {
+		return err
 	}
+
+	if err := simulate(w, *ticks, *every); err != nil {
+		return err
+	}
+	return saveFinal(w, *savePath)
+}
+
+// printDefaultConfig writes the default config as indented JSON to stdout.
+func printDefaultConfig() error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(sim.DefaultConfig()); err != nil {
+		return fmt.Errorf("print config: %w", err)
+	}
+	return nil
+}
+
+// overrides bundles the flag pointers whose explicit values override the config.
+type overrides struct {
+	plants, herbivores, carnivores *int
+	width, height                  *float64
+	rescue                         *bool
+}
+
+// applyFlagOverrides copies only the explicitly-set flags onto cfg.
+func applyFlagOverrides(cfg *sim.Config, o overrides) {
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "plants":
+			cfg.Plants = *o.plants
+		case "herbivores":
+			cfg.Herbivores = *o.herbivores
+		case "carnivores":
+			cfg.Carnivores = *o.carnivores
+		case "width":
+			cfg.Width = *o.width
+		case "height":
+			cfg.Height = *o.height
+		case "rescue":
+			cfg.Rescue = *o.rescue
+		}
+	})
+}
+
+// buildWorld constructs the world, loading from a snapshot when loadPath is set.
+func buildWorld(rng *rand.Rand, cfg sim.Config, loadPath string) (*sim.World, error) {
+	if loadPath != "" {
+		snap, err := sim.LoadSnapshotFile(loadPath)
+		if err != nil {
+			return nil, fmt.Errorf("load snapshot: %w", err)
+		}
+		return sim.NewWorldFromSnapshot(rng, snap), nil
+	}
+	return sim.NewWorld(rng, cfg), nil
+}
+
+// simulate advances the world, emitting a CSV stats row every `every` ticks.
+func simulate(w *sim.World, ticks, every int) error {
 	out := bufio.NewWriter(os.Stdout)
-	defer out.Flush()
 	fmt.Fprintln(out, "tick,plants,herbivores,carnivores,meanGen,maxGen,meanSize,meanSpeed,meanSense,meanPlast,meanCurio,meanDrift,lineages")
-	for t := 0; t <= *ticks; t++ {
-		if t%*every == 0 {
+	for t := 0; t <= ticks; t++ {
+		if t%every == 0 {
 			writeStats(out, w, t)
 		}
 		w.Step()
 	}
-	if *savePath != "" {
-		out.Flush()
-		if err := sim.SaveSnapshot(*savePath, w.Snapshot()); err != nil {
-			log.Fatalf("save snapshot: %v", err)
-		}
-		fmt.Fprintf(os.Stderr, "saved population (%d agents) to %s\n", len(w.Snapshot().Agents), *savePath)
+	if err := out.Flush(); err != nil {
+		return fmt.Errorf("flush output: %w", err)
 	}
+	return nil
+}
+
+// saveFinal writes the final population snapshot when savePath is set.
+func saveFinal(w *sim.World, savePath string) error {
+	if savePath == "" {
+		return nil
+	}
+	if err := sim.SaveSnapshot(savePath, w.Snapshot()); err != nil {
+		return fmt.Errorf("save snapshot: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "saved population (%d agents) to %s\n", len(w.Snapshot().Agents), savePath)
+	return nil
 }
 
 // writeStats emits one CSV row summarising the living population.

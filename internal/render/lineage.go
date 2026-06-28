@@ -1,3 +1,5 @@
+//go:build ebiten
+
 package render
 
 import (
@@ -5,9 +7,10 @@ import (
 	"image/color"
 	"sort"
 
-	"github.com/danielriddell21/vivarium/internal/sim"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 const maxLineageBands = 8 // distinct lineages drawn before the rest become "other"
@@ -110,12 +113,12 @@ func (g *Game) drawLineagePanel(screen *ebiten.Image) {
 			sumTop += cnt
 			segH := float32(float64(cnt) / float64(lv.maxTotal) * plotH)
 			if segH > 0 {
-				vector.DrawFilledRect(screen, x, bottom-accH-segH, 1, segH, lineagePalette[lv.colorOf[id]], false)
+				vector.FillRect(screen, x, bottom-accH-segH, 1, segH, lineagePalette[lv.colorOf[id]], false)
 				accH += segH
 			}
 		}
 		if otherH := float32(float64(total-sumTop) / float64(lv.maxTotal) * plotH); otherH > 0 {
-			vector.DrawFilledRect(screen, x, bottom-accH-otherH, 1, otherH, colOther, false)
+			vector.FillRect(screen, x, bottom-accH-otherH, 1, otherH, colOther, false)
 		}
 	}
 

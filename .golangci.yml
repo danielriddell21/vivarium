@@ -1,0 +1,75 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - dupl
+    - cyclop
+    - errorlint
+    - gocognit
+    - gocritic
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - prealloc
+    - thelper
+    - unconvert
+    - unparam
+    - whitespace
+    - wrapcheck
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+    cyclop:
+      max-complexity: 15
+    gocognit:
+      min-complexity: 20
+    misspell:
+      # WIH = "weights input->hidden", a standard neural-net matrix name.
+      ignore-rules:
+        - WIH
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    gosec:
+      excludes:
+        - G107
+        - G115
+        - G204
+        - G304
+        - G404
+        - G602
+        - G703
+  exclusions:
+    paths:
+      - examples
+    rules:
+      - path: "_test\\.go"
+        linters:
+          - wrapcheck
+          - gosec
+          - unparam
+          - gocognit
+          - cyclop
+          - prealloc
+          - errcheck
+          - gocritic
+          - noctx
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  exclusions:
+    paths:
+      - examples
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/danielriddell21/vivarium

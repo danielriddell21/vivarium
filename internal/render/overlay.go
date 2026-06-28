@@ -1,12 +1,15 @@
+//go:build ebiten
+
 package render
 
 import (
 	"fmt"
 	"image/color"
 
-	"github.com/danielriddell21/vivarium/internal/sim"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 // drawHUD shows the run state, live counts, and control hints in the top-left.
@@ -158,7 +161,7 @@ func drawLevelBars(screen *ebiten.Image, vals []float64, x, y, w, h float64, clr
 		}
 		cx := x + float64(i)*slot + (slot-bw)/2
 		bh := v * h
-		vector.DrawFilledRect(screen, float32(cx), float32(base-bh), float32(bw), float32(bh), clr, false)
+		vector.FillRect(screen, float32(cx), float32(base-bh), float32(bw), float32(bh), clr, false)
 	}
 }
 
@@ -187,7 +190,7 @@ func drawBars(screen *ebiten.Image, vals []float64, x, y, w, h float64) {
 			top = mid
 			bh = -bh
 		}
-		vector.DrawFilledRect(screen, float32(cx), float32(top), float32(bw), float32(bh), clr, false)
+		vector.FillRect(screen, float32(cx), float32(top), float32(bw), float32(bh), clr, false)
 	}
 }
 

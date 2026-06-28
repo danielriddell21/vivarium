@@ -1,15 +1,18 @@
+//go:build ebiten
+
 package render
 
 import (
 	"image/color"
 	"math"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
-	"github.com/danielriddell21/vivarium/internal/sim"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
+
+	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 // Palette for the world and overlays.
@@ -28,13 +31,6 @@ var (
 // face is a shared bitmap font for all overlay text (no external font files).
 var face = text.NewGoXFace(basicfont.Face7x13)
 
-// whiteImage is a 3x3 white source used to fill arbitrary vector paths.
-var whiteImage = func() *ebiten.Image {
-	img := ebiten.NewImage(3, 3)
-	img.Fill(color.White)
-	return img
-}()
-
 // Draw renders one frame: the world (through the pan/zoom camera) then the
 // screen-space overlays.
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -42,7 +38,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	world.Fill(nightTint(g.World.LightFactor()))
 
 	for _, o := range g.World.Obstacles() {
-		vector.DrawFilledCircle(world, float32(o.Pos.X), float32(o.Pos.Y), float32(o.Radius), colObstacle, true)
+		vector.FillCircle(world, float32(o.Pos.X), float32(o.Pos.Y), float32(o.Radius), colObstacle, true)
 	}
 
 	for _, f := range g.World.Foods {
@@ -53,7 +49,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if f.Type == 1 {
 			clr = colFood2
 		}
-		vector.DrawFilledCircle(world, float32(f.Pos.X), float32(f.Pos.Y), 2, clr, false)
+		vector.FillCircle(world, float32(f.Pos.X), float32(f.Pos.Y), 2, clr, false)
 	}
 
 	for _, a := range g.World.Agents {
@@ -124,7 +120,7 @@ func drawAgent(dst *ebiten.Image, a *sim.Agent, selected bool, override color.Co
 	case sim.Carnivore:
 		drawTriangle(dst, a.Pos, a.Heading, a.Traits.Size, body)
 	default:
-		vector.DrawFilledCircle(dst, float32(a.Pos.X), float32(a.Pos.Y), float32(a.Traits.Size), body, true)
+		vector.FillCircle(dst, float32(a.Pos.X), float32(a.Pos.Y), float32(a.Traits.Size), body, true)
 	}
 
 	// Heading indicator.
@@ -144,16 +140,9 @@ func drawTriangle(dst *ebiten.Image, pos geom.Vec2, heading, size float64, clr c
 	p.LineTo(float32(right.X), float32(right.Y))
 	p.Close()
 
-	vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-	r, gg, b, alpha := clr.RGBA()
-	for i := range vs {
-		vs[i].SrcX, vs[i].SrcY = 1, 1
-		vs[i].ColorR = float32(r) / 0xffff
-		vs[i].ColorG = float32(gg) / 0xffff
-		vs[i].ColorB = float32(b) / 0xffff
-		vs[i].ColorA = float32(alpha) / 0xffff
-	}
-	dst.DrawTriangles(vs, is, whiteImage, &ebiten.DrawTrianglesOptions{AntiAlias: true})
+	op := &vector.DrawPathOptions{AntiAlias: true}
+	op.ColorScale.ScaleWithColor(clr)
+	vector.FillPath(dst, &p, nil, op)
 }
 
 // drawText renders s at (x, y) measured from the top-left.
@@ -166,7 +155,7 @@ func drawText(dst *ebiten.Image, s string, x, y float64, clr color.Color) {
 
 // drawPanel draws a translucent rounded-ish background box for overlay text.
 func drawPanel(dst *ebiten.Image, x, y, w, h float64) {
-	vector.DrawFilledRect(dst, float32(x), float32(y), float32(w), float32(h), colPanel, false)
+	vector.FillRect(dst, float32(x), float32(y), float32(w), float32(h), colPanel, false)
 }
 
 func radToDeg(r float64) float64 { return r * 180 / math.Pi }

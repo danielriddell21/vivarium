@@ -1,3 +1,5 @@
+//go:build ebiten
+
 /*
 Vivarium is a small 2D ecosystem simulation in which behaviour evolves rather
 than being programmed.
@@ -96,9 +98,10 @@ import (
 	"math/rand"
 	"os"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"github.com/danielriddell21/vivarium/internal/render"
 	"github.com/danielriddell21/vivarium/internal/sim"
-	"github.com/hajimehoshi/ebiten/v2"
 )
 
 func main() {

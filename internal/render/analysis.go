@@ -1,3 +1,5 @@
+//go:build ebiten
+
 package render
 
 import (
@@ -6,10 +8,11 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/danielriddell21/vivarium/internal/analytics"
-	"github.com/danielriddell21/vivarium/internal/sim"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/danielriddell21/vivarium/internal/analytics"
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 const (
@@ -125,7 +128,7 @@ func (g *Game) drawAnalysisPanel(screen *ebiten.Image) {
 	// Legend: a coloured swatch and size per cluster.
 	ly := py + 36
 	for c := 0; c < a.k; c++ {
-		vector.DrawFilledRect(screen, float32(px+8), float32(ly), 8, 8, clusterColor(c), false)
+		vector.FillRect(screen, float32(px+8), float32(ly), 8, 8, clusterColor(c), false)
 		drawText(screen, fmt.Sprintf("sp%d  %d", c, a.sizes[c]), px+22, ly-3, colText)
 		ly += 14
 	}
@@ -148,7 +151,7 @@ func (g *Game) drawAnalysisPanel(screen *ebiten.Image) {
 	for agent, xy := range a.coords {
 		fx := plotX + (xy[0]-a.minX)/spanX*plotW
 		fy := plotY + plotH - (xy[1]-a.minY)/spanY*plotH
-		vector.DrawFilledCircle(screen, float32(fx), float32(fy), 1.5, clusterColor(a.clusterOf[agent]), false)
+		vector.FillCircle(screen, float32(fx), float32(fy), 1.5, clusterColor(a.clusterOf[agent]), false)
 	}
 }
 

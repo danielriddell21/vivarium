@@ -1,3 +1,5 @@
+//go:build ebiten
+
 package render
 
 import "github.com/hajimehoshi/ebiten/v2"

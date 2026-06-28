@@ -2,6 +2,7 @@ package sim
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"os"
 
@@ -124,9 +125,12 @@ func NewWorldFromSnapshot(rng *rand.Rand, s Snapshot) *World {
 func SaveSnapshot(path string, s Snapshot) error {
 	data, err := json.MarshalIndent(s, "", " ")
 	if err != nil {
-		return err
+		return fmt.Errorf("sim: marshal snapshot: %w", err)
 	}
-	return os.WriteFile(path, data, 0o600)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("sim: write snapshot: %w", err)
+	}
+	return nil
 }
 
 // LoadSnapshotFile reads a snapshot from a JSON file.
@@ -134,8 +138,10 @@ func LoadSnapshotFile(path string) (Snapshot, error) {
 	var s Snapshot
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return s, err
+		return s, fmt.Errorf("sim: read snapshot: %w", err)
 	}
-	err = json.Unmarshal(data, &s)
-	return s, err
+	if err := json.Unmarshal(data, &s); err != nil {
+		return s, fmt.Errorf("sim: parse snapshot: %w", err)
+	}
+	return s, nil
 }

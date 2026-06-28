@@ -46,9 +46,7 @@ func TestObstacleBlocksMovement(t *testing.T) {
 
 	start := a.Pos
 	a.act(w, []float64{0, 1, 0, 0}) // full speed ahead
-	if a.Pos != start {
-		// It may take a couple of ticks to reach; step until it would enter.
-	}
+	// It may take a couple of ticks to reach the rock; step until it would enter.
 	for i := 0; i < 20; i++ {
 		a.act(w, []float64{0, 1, 0, 0})
 	}

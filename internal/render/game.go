@@ -1,14 +1,13 @@
-// Package render wires the simulation to Ebiten: it draws the world, overlays
-// (population graph, HUD, inspector), and handles keyboard/mouse input. It is the
-// only package besides cmd that depends on Ebiten, keeping the simulation core
-// free of any graphics concerns.
+//go:build ebiten
+
 package render
 
 import (
-	"github.com/danielriddell21/vivarium/internal/geom"
-	"github.com/danielriddell21/vivarium/internal/sim"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+
+	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 const (
@@ -76,6 +75,14 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) handleInput() {
+	g.handleSpeedKeys()
+	g.handleViewKeys()
+	g.handleCamera()
+	g.refreshOverlays()
+}
+
+// handleSpeedKeys toggles pause and adjusts simulation speed.
+func (g *Game) handleSpeedKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		g.Paused = !g.Paused
 	}
@@ -86,7 +93,10 @@ func (g *Game) handleInput() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) || inpututil.IsKeyJustPressed(ebiten.KeyKPSubtract) {
 		g.Speed = clampInt(g.Speed/2, minSpeed, maxSpeed)
 	}
+}
 
+// handleViewKeys toggles the analysis overlays and handles the save key.
+func (g *Game) handleViewKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
 		g.analysisOn = !g.analysisOn
 		g.framesToScan = 0 // recompute immediately on enable
@@ -116,8 +126,10 @@ func (g *Game) handleInput() {
 	if g.saveMsgTTL > 0 {
 		g.saveMsgTTL--
 	}
+}
 
-	// Camera: mouse wheel zooms toward the cursor, arrow keys pan, 0 resets.
+// handleCamera applies wheel zoom, arrow-key panning, reset, and click-select.
+func (g *Game) handleCamera() {
 	mx, my := ebiten.CursorPosition()
 	if _, wy := ebiten.Wheel(); wy != 0 {
 		factor := 1.1
@@ -142,13 +154,14 @@ func (g *Game) handleInput() {
 	if inpututil.IsKeyJustPressed(ebiten.Key0) {
 		g.cam = newCamera()
 	}
-
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		wx, wy := g.cam.screenToWorld(float64(mx), float64(my))
 		g.Selected = g.World.NearestAgent(geom.Vec2{X: wx, Y: wy})
 	}
+}
 
-	// Refresh the species analysis on a throttle while the view is on.
+// refreshOverlays recomputes whichever analysis overlay is active, on a throttle.
+func (g *Game) refreshOverlays() {
 	if g.analysisOn {
 		if g.framesToScan <= 0 {
 			g.analysis = computeAnalysis(g.World, g.analysis)
