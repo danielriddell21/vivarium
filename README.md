@@ -1,4 +1,9 @@
-# Vivarium
+# vivarium
+> *An ecosystem where behaviour evolves.*
+
+[![CI](https://github.com/danielriddell21/vivarium/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/vivarium/actions/workflows/ci.yaml)
+[![Go 1.26](https://img.shields.io/badge/go-1.26-blue)](https://go.dev)
+[![MIT License](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
 A 2D ecosystem simulation in Go + [Ebiten](https://ebitengine.org) where agent
 **behaviour evolves** rather than being programmed. Each organism is steered by a
