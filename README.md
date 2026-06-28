@@ -1,4 +1,5 @@
 # vivarium
+
 > *An ecosystem where behaviour evolves.*
 
 [![CI](https://github.com/danielriddell21/vivarium/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/vivarium/actions/workflows/ci.yaml)
@@ -82,7 +83,7 @@ go run ./cmd/vivarium-headless --load evolved.json --ticks 20000               #
 go run ./cmd/vivarium --load evolved.json                                     # open in the GUI
 ```
 
-## Project layout
+## Layout
 
 ```
 cmd/vivarium           GUI entry point
