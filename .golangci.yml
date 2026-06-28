@@ -13,6 +13,7 @@ linters:
     - nilerr
     - noctx
     - prealloc
+    - revive
     - thelper
     - unconvert
     - unparam
@@ -28,6 +29,10 @@ linters:
       max-complexity: 15
     gocognit:
       min-complexity: 20
+    revive:
+      rules:
+        - name: exported
+          arguments: [disableStutteringCheck]
     misspell:
       # WIH = "weights input->hidden", a standard neural-net matrix name.
       ignore-rules:
@@ -50,8 +55,12 @@ linters:
     paths:
       - examples
     rules:
+      - path: (^|/)(internal|cmd)/
+        linters:
+          - revive
       - path: "_test\\.go"
         linters:
+          - revive
           - dupl
           - wrapcheck
           - gosec
