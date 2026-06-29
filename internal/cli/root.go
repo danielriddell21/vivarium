@@ -6,27 +6,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/danielriddell21/vivarium/internal/gui"
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
-
-// guiOpts holds the resolved command-line options for the GUI. changed reports
-// whether a given flag was set explicitly (so config-file values are only
-// overridden by flags the user actually passed).
-type guiOpts struct {
-	seed                           int64
-	width, height                  float64
-	plants, herbivores, carnivores int
-	rescue                         bool
-	configPath                     string
-	printConfig                    bool
-	loadPath, snapPath             string
-	changed                        func(name string) bool
-}
 
 // Execute builds and runs the root command. Returns non-nil on error.
 func Execute(version string) error {
 	cfg := sim.DefaultConfig()
-	var o guiOpts
+	var o gui.Config
 
 	root := &cobra.Command{
 		Use:           "vivarium",
@@ -37,23 +24,26 @@ func Execute(version string) error {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			o.changed = cmd.Flags().Changed
-			return runGame(o)
+			o.Changed = cmd.Flags().Changed
+			if err := gui.Run(o); err != nil {
+				return fmt.Errorf("run gui: %w", err)
+			}
+			return nil
 		},
 	}
 
 	f := root.Flags()
-	f.Int64Var(&o.seed, "seed", 1, "random seed for reproducible runs")
-	f.Float64Var(&o.width, "width", cfg.Width, "world width in pixels")
-	f.Float64Var(&o.height, "height", cfg.Height, "world height in pixels")
-	f.IntVar(&o.plants, "plants", cfg.Plants, "initial plant count")
-	f.IntVar(&o.herbivores, "herbivores", cfg.Herbivores, "initial herbivore count")
-	f.IntVar(&o.carnivores, "carnivores", cfg.Carnivores, "initial carnivore count")
-	f.BoolVar(&o.rescue, "rescue", cfg.Rescue, "rescue effect: immigrants arrive when a tier nears extinction")
-	f.StringVar(&o.configPath, "config", "", "path to a JSON config file overriding defaults (see --print-config)")
-	f.BoolVar(&o.printConfig, "print-config", false, "print the default config as JSON and exit")
-	f.StringVar(&o.loadPath, "load", "", "load a saved population snapshot instead of a fresh world")
-	f.StringVar(&o.snapPath, "snapshot", "vivarium-snapshot.json", "file the 's' key saves the population to")
+	f.Int64Var(&o.Seed, "seed", 1, "random seed for reproducible runs")
+	f.Float64Var(&o.Width, "width", cfg.Width, "world width in pixels")
+	f.Float64Var(&o.Height, "height", cfg.Height, "world height in pixels")
+	f.IntVar(&o.Plants, "plants", cfg.Plants, "initial plant count")
+	f.IntVar(&o.Herbivores, "herbivores", cfg.Herbivores, "initial herbivore count")
+	f.IntVar(&o.Carnivores, "carnivores", cfg.Carnivores, "initial carnivore count")
+	f.BoolVar(&o.Rescue, "rescue", cfg.Rescue, "rescue effect: immigrants arrive when a tier nears extinction")
+	f.StringVar(&o.ConfigPath, "config", "", "path to a JSON config file overriding defaults (see --print-config)")
+	f.BoolVar(&o.PrintConfig, "print-config", false, "print the default config as JSON and exit")
+	f.StringVar(&o.LoadPath, "load", "", "load a saved population snapshot instead of a fresh world")
+	f.StringVar(&o.SnapPath, "snapshot", "vivarium-snapshot.json", "file the 's' key saves the population to")
 
 	root.AddCommand(headlessCmd())
 	root.AddCommand(completionCmd())

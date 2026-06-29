@@ -1,6 +1,6 @@
 //go:build ebiten
 
-package render
+package gui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"

@@ -1,6 +1,6 @@
 //go:build ebiten
 
-package render
+package gui
 
 import (
 	"image/color"

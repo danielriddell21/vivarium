@@ -1,6 +1,6 @@
 //go:build ebiten
 
-package cli
+package gui
 
 import (
 	"encoding/json"
@@ -10,13 +10,15 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/danielriddell21/vivarium/internal/render"
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-// runGame resolves the configuration and opens the Ebiten window.
-func runGame(o guiOpts) error {
-	if o.printConfig {
+// Available reports whether the Ebiten window is compiled in.
+func Available() bool { return true }
+
+// Run resolves the configuration and opens the Ebiten window.
+func Run(o Config) error {
+	if o.PrintConfig {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(sim.DefaultConfig()); err != nil {
@@ -27,39 +29,39 @@ func runGame(o guiOpts) error {
 
 	cfg := sim.DefaultConfig()
 	// Precedence: built-in defaults < config file < explicitly-set CLI flags.
-	if o.configPath != "" {
-		c, err := sim.LoadConfig(o.configPath)
+	if o.ConfigPath != "" {
+		c, err := sim.LoadConfig(o.ConfigPath)
 		if err != nil {
 			return fmt.Errorf("load config: %w", err)
 		}
 		cfg = c
 	}
-	if o.changed("width") {
-		cfg.Width = o.width
+	if o.Changed("width") {
+		cfg.Width = o.Width
 	}
-	if o.changed("height") {
-		cfg.Height = o.height
+	if o.Changed("height") {
+		cfg.Height = o.Height
 	}
-	if o.changed("plants") {
-		cfg.Plants = o.plants
+	if o.Changed("plants") {
+		cfg.Plants = o.Plants
 	}
-	if o.changed("herbivores") {
-		cfg.Herbivores = o.herbivores
+	if o.Changed("herbivores") {
+		cfg.Herbivores = o.Herbivores
 	}
-	if o.changed("carnivores") {
-		cfg.Carnivores = o.carnivores
+	if o.Changed("carnivores") {
+		cfg.Carnivores = o.Carnivores
 	}
-	if o.changed("rescue") {
-		cfg.Rescue = o.rescue
+	if o.Changed("rescue") {
+		cfg.Rescue = o.Rescue
 	}
 	if cfg.TargetPlants < cfg.Plants {
 		cfg.TargetPlants = cfg.Plants
 	}
 
-	rng := rand.New(rand.NewSource(o.seed))
+	rng := rand.New(rand.NewSource(o.Seed))
 	var world *sim.World
-	if o.loadPath != "" {
-		snap, err := sim.LoadSnapshotFile(o.loadPath)
+	if o.LoadPath != "" {
+		snap, err := sim.LoadSnapshotFile(o.LoadPath)
 		if err != nil {
 			return fmt.Errorf("load snapshot: %w", err)
 		}
@@ -68,8 +70,8 @@ func runGame(o guiOpts) error {
 	} else {
 		world = sim.NewWorld(rng, cfg)
 	}
-	game := render.NewGame(world)
-	game.SnapshotPath = o.snapPath
+	game := NewGame(world)
+	game.SnapshotPath = o.SnapPath
 
 	ebiten.SetWindowSize(int(cfg.Width), int(cfg.Height))
 	ebiten.SetWindowTitle("Vivarium — evolving ecosystem")

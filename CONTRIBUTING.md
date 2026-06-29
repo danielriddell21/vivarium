@@ -33,7 +33,7 @@ build and CI need no graphics or cgo dependencies.
 ```
 cmd/vivarium/            CLI entry point (GUI by default; `headless` subcommand)
 internal/cli/            Cobra root, the headless subcommand, completion
-internal/render/         Ebiten rendering (build-tagged)
+internal/gui/            Ebiten window + Run/Available seam (build-tagged)
 internal/sim/            simulation core
 internal/                neural, analytics, geom, …
 docs/                    documentation

@@ -92,7 +92,7 @@ internal/geom          2D vectors + toroidal math
 internal/neural        hand-rolled recurrent brain + world-model
 internal/sim           World, Agent, evolution, learning, environment
 internal/analytics     hand-rolled k-means + PCA for the species view
-internal/render        Ebiten game loop, drawing, overlays, input
+internal/gui           Ebiten game loop, drawing, overlays, input (Run/Available seam)
 ```
 
 `geom`, `neural`, `sim`, and `analytics` are pure Go with no Ebiten dependency, so
