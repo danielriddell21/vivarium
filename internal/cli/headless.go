@@ -1,23 +1,9 @@
-/*
-vivarium-headless runs the ecosystem simulation without any GUI, for long offline
-experiments and reproducible batch runs. It imports only the simulation core (no
-Ebiten), so it needs no display and starts instantly.
-
-It advances the world for a number of ticks and emits a CSV row of population and
-trait statistics every N ticks to stdout, which is easy to redirect to a file and
-plot. Configuration uses the same JSON files and flags as the GUI binary.
-
-	go run ./cmd/vivarium-headless -seed 1 -ticks 20000 -every 200 > run.csv
-	go run ./cmd/vivarium-headless -config myconfig.json -ticks 50000 > run.csv
-	go run ./cmd/vivarium-headless -print-config > config.json
-*/
-package main
+package cli
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 
@@ -27,18 +13,15 @@ import (
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-// version is the build version, overridden at release time via
-// -ldflags "-X main.version=...". It defaults to "dev" for local builds.
-var version = "dev"
-
-func main() {
-	if err := Execute(version); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// Execute builds and runs the root command. Returns non-nil on error.
-func Execute(version string) error {
+// headlessCmd advances the ecosystem simulation without any GUI, for long
+// offline experiments and reproducible batch runs. It imports only the
+// simulation core (no Ebiten), so it needs no display and starts instantly. It
+// emits a CSV row of population and trait statistics every N ticks to stdout.
+//
+//	vivarium headless --seed 1 --ticks 20000 --every 200 > run.csv
+//	vivarium headless --config myconfig.json --ticks 50000 > run.csv
+//	vivarium headless --print-config > config.json
+func headlessCmd() *cobra.Command {
 	cfg := sim.DefaultConfig()
 	var (
 		seed                           int64
@@ -51,11 +34,10 @@ func Execute(version string) error {
 		loadPath, savePath             string
 	)
 
-	root := &cobra.Command{
-		Use:           "vivarium-headless",
+	cmd := &cobra.Command{
+		Use:           "headless",
 		Short:         "Headless batch runner for the Vivarium ecosystem simulation",
-		Long:          "vivarium-headless advances the ecosystem simulation without a GUI and emits CSV population/trait statistics, for long offline experiments and reproducible batch runs.",
-		Version:       version,
+		Long:          "headless advances the ecosystem simulation without a GUI and emits CSV population/trait statistics, for long offline experiments and reproducible batch runs.",
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -82,7 +64,7 @@ func Execute(version string) error {
 		},
 	}
 
-	f := root.Flags()
+	f := cmd.Flags()
 	f.Int64Var(&seed, "seed", 1, "random seed for reproducible runs")
 	f.IntVar(&ticks, "ticks", 10000, "number of ticks to simulate")
 	f.IntVar(&every, "every", 200, "emit a stats row every N ticks")
@@ -97,12 +79,7 @@ func Execute(version string) error {
 	f.StringVar(&loadPath, "load", "", "start from a saved population snapshot")
 	f.StringVar(&savePath, "save", "", "write the final population snapshot to this file")
 
-	root.AddCommand(completionCmd())
-
-	if err := root.Execute(); err != nil {
-		return fmt.Errorf("vivarium-headless: %w", err)
-	}
-	return nil
+	return cmd
 }
 
 // ov bundles the flag values that can override the config when set explicitly.

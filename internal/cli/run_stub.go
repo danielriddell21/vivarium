@@ -1,6 +1,6 @@
 //go:build !ebiten
 
-package main
+package cli
 
 import "errors"
 
@@ -8,5 +8,5 @@ import "errors"
 // behind the "ebiten" build tag so the default build needs no graphics or cgo
 // dependencies.
 func runGame(_ guiOpts) error {
-	return errors.New("built without the GUI; rebuild with -tags ebiten, or use vivarium-headless")
+	return errors.New("built without the GUI; rebuild with -tags ebiten, or use the 'vivarium headless' subcommand")
 }

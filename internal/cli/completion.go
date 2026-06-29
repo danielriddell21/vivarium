@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"os"
@@ -10,22 +10,22 @@ func completionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate shell completion scripts",
-		Long: `Generate shell completion scripts for vivarium-headless.
+		Long: `Generate shell completion scripts for vivarium.
 
 Bash:
-  vivarium-headless completion bash > /etc/bash_completion.d/vivarium-headless
+  vivarium completion bash > /etc/bash_completion.d/vivarium
   # or for the current user:
-  vivarium-headless completion bash > ~/.local/share/bash-completion/completions/vivarium-headless
+  vivarium completion bash > ~/.local/share/bash-completion/completions/vivarium
 
 Zsh:
-  vivarium-headless completion zsh > "${fpath[1]}/_vivarium-headless"
+  vivarium completion zsh > "${fpath[1]}/_vivarium"
   # then restart your shell or run: autoload -U compinit && compinit
 
 Fish:
-  vivarium-headless completion fish > ~/.config/fish/completions/vivarium-headless.fish
+  vivarium completion fish > ~/.config/fish/completions/vivarium.fish
 
 PowerShell:
-  vivarium-headless completion powershell | Out-String | Invoke-Expression
+  vivarium completion powershell | Out-String | Invoke-Expression
   # to persist, add that line to your $PROFILE`,
 		ValidArgs:    []string{"bash", "zsh", "fish", "powershell"},
 		Args:         cobra.ExactArgs(1),

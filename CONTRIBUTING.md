@@ -15,7 +15,7 @@ A C toolchain is only needed for the optional Ebiten GUI (`just build-gui`).
 just build      # build everything (headless; GUI is gated behind the `ebiten` tag)
 just build-gui  # build the GUI binary (-tags ebiten, needs cgo)
 just gui        # run the Ebiten GUI
-just run        # run the headless batch simulator (cmd/vivarium-headless)
+just run        # run the headless batch simulator (vivarium headless)
 just test       # run unit tests
 just lint       # golangci-lint
 just vet        # go vet
@@ -31,8 +31,8 @@ The Ebiten window is compiled only under the `ebiten` build tag, so the default
 build and CI need no graphics or cgo dependencies.
 
 ```
-cmd/vivarium/            GUI front-end (Ebiten, behind the `ebiten` tag)
-cmd/vivarium-headless/   CGO-free batch simulator
+cmd/vivarium/            CLI entry point (GUI by default; `headless` subcommand)
+internal/cli/            Cobra root, the headless subcommand, completion
 internal/render/         Ebiten rendering (build-tagged)
 internal/sim/            simulation core
 internal/                neural, analytics, geom, …

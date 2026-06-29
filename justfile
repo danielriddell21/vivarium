@@ -20,7 +20,7 @@ gui *ARGS:
 # run the headless batch simulator
 [group('run')]
 run *ARGS:
-    go run ./cmd/vivarium-headless {{ARGS}}
+    go run ./cmd/vivarium headless {{ARGS}}
 
 # run the tests
 [group('test')]

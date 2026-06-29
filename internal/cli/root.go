@@ -1,4 +1,5 @@
-package main
+// Package cli wires together the root Cobra command and all subcommands.
+package cli
 
 import (
 	"fmt"
@@ -30,7 +31,7 @@ func Execute(version string) error {
 	root := &cobra.Command{
 		Use:           "vivarium",
 		Short:         "Watch an evolving 2D ecosystem in a native window",
-		Long:          "vivarium opens a window showing a 2D ecosystem in which agent behaviour evolves and is learned. The GUI requires a build with the \"ebiten\" tag; for headless batch runs use vivarium-headless.",
+		Long:          "vivarium opens a window showing a 2D ecosystem in which agent behaviour evolves and is learned. The GUI requires a build with the \"ebiten\" tag; for headless batch runs use the 'vivarium headless' subcommand.",
 		Version:       version,
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
@@ -54,6 +55,7 @@ func Execute(version string) error {
 	f.StringVar(&o.loadPath, "load", "", "load a saved population snapshot instead of a fresh world")
 	f.StringVar(&o.snapPath, "snapshot", "vivarium-snapshot.json", "file the 's' key saves the population to")
 
+	root.AddCommand(headlessCmd())
 	root.AddCommand(completionCmd())
 
 	if err := root.Execute(); err != nil {

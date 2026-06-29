@@ -64,7 +64,7 @@ learning scalars are exposed as a **JSON config** so a run can be tuned without
 recompiling:
 
 ```sh
-go run ./cmd/vivarium-headless --print-config > myconfig.json   # template (display-free)
+go run ./cmd/vivarium headless --print-config > myconfig.json   # template (display-free)
 go run ./cmd/vivarium --config myconfig.json
 ```
 
@@ -73,21 +73,21 @@ default is committed at [`docs/config.example.json`](docs/config.example.json).
 
 ## Headless runs & snapshots
 
-A separate **headless** binary runs the sim with no GUI (no Ebiten/display) and
+The **`headless`** subcommand runs the sim with no GUI (no Ebiten/display) and
 streams CSV statistics — ideal for long offline experiments. Populations can be
 saved to disk and reloaded to resume, share, or seed runs:
 
 ```sh
-go run ./cmd/vivarium-headless --ticks 50000 --every 200 --save evolved.json > run.csv
-go run ./cmd/vivarium-headless --load evolved.json --ticks 20000               # continue
+go run ./cmd/vivarium headless --ticks 50000 --every 200 --save evolved.json > run.csv
+go run ./cmd/vivarium headless --load evolved.json --ticks 20000               # continue
 go run ./cmd/vivarium --load evolved.json                                     # open in the GUI
 ```
 
 ## Layout
 
 ```
-cmd/vivarium           GUI entry point
-cmd/vivarium-headless  no-GUI CSV runner for offline experiments
+cmd/vivarium           CLI entry point (GUI by default; `headless` subcommand)
+internal/cli           Cobra root, the headless subcommand, and completion
 internal/geom          2D vectors + toroidal math
 internal/neural        hand-rolled recurrent brain + world-model
 internal/sim           World, Agent, evolution, learning, environment

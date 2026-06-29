@@ -1,6 +1,6 @@
 //go:build ebiten
 
-package main
+package cli
 
 import (
 	"encoding/json"
