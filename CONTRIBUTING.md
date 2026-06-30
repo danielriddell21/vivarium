@@ -18,12 +18,19 @@ just gui        # run the Ebiten GUI
 just run        # run the headless batch simulator (vivarium headless)
 just test       # run unit tests
 just lint       # golangci-lint
+just ci         # lint + test + build
 just vet        # go vet
 just fmt        # gofmt
 just tidy       # go mod tidy
 ```
 
-Run `just --list` to see every recipe. Run `just lint` and `just test` before each commit. CI runs lint + test + build (headless) on every push to `trunk` and every pull request targeting `trunk`.
+Run `just --list` to see every recipe. Run `just ci` (lint + test + build) before each commit. CI runs the same gate (headless) on every push to `trunk` and every pull request targeting `trunk`.
+
+## Conventions
+
+The CLI entrypoint and Ebiten GUI structure is shared across the tool family
+(unum is the CLI reference; rubix/vivarium the GUI references). See
+[CONVENTIONS.md](CONVENTIONS.md).
 
 ## Project layout
 

@@ -32,6 +32,10 @@ test:
 lint:
     golangci-lint run
 
+# full gate: lint + test + build. all must pass before committing
+[group('dev')]
+ci: lint test build
+
 # vet the code
 [group('dev')]
 vet:

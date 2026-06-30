@@ -1,0 +1,21 @@
+# vivarium — Claude Code instructions
+
+vivarium is a small 2D ecosystem simulation in which agent behaviour evolves rather than being programmed. Correctness and simplicity over cleverness — prefer a well-tested, focused function over a clever abstraction. If the standard library does it, use it.
+
+## Before every commit
+
+* Run `just ci` autonomously (lint + test + build). All must pass.
+* When adding a function or package, write unit tests alongside the code in the same commit.
+* GUI code lives behind the `ebiten` build tag in `internal/gui`; when you touch it, also run `go build -tags ebiten ./...`. Headless batch runs go through the `vivarium headless` subcommand.
+* Never commit until the user explicitly confirms. Propose changes as diffs, run `just ci` autonomously, then stop and wait before `git commit`.
+
+## Code quality
+
+* Run `just lint` before proposing a diff. Fix all lint errors before committing.
+* Prefer early returns over nesting.
+* Do not add error handling or fallbacks for scenarios that cannot happen.
+* Do not add comments unless the logic is non-obvious.
+
+## Conventions
+
+* The CLI entrypoint and Ebiten GUI structure is shared across the tool family and documented in [CONVENTIONS.md](CONVENTIONS.md). Keep new code consistent with it.
