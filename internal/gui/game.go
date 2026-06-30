@@ -11,55 +11,42 @@ import (
 )
 
 const (
-	maxSpeed = 32 // maximum simulation steps per displayed frame
+	maxSpeed = 32
 	minSpeed = 1
 )
 
-// Game adapts a sim.World to the ebiten.Game interface.
 type Game struct {
 	World    *sim.World
 	Paused   bool
-	Speed    int        // simulation steps per frame when running
-	Selected *sim.Agent // agent shown in the inspector, or nil
+	Speed    int
+	Selected *sim.Agent
 
-	// Analysis ("species") view: clusters the population in brain-genome space and
-	// projects it to 2D. Recomputed on a throttle so it stays cheap.
 	analysisOn   bool
 	analysis     *analysis
 	framesToScan int
 
-	// Lineage view: a stacked chart of lineage abundance over time, with agents
-	// coloured by lineage. Mutually exclusive with the species view.
 	lineageOn       bool
 	lineageView     *lineageView
 	framesToLineage int
 
-	// Phylogeny view: a coalescent genealogy tree of the living population.
 	phyloOn       bool
 	phylo         *phyloView
 	framesToPhylo int
 
-	// hideSignals suppresses the communication halos drawn around agents.
 	hideSignals bool
 
-	// cam pans/zooms the world view; worldImg is the offscreen buffer the world is
-	// drawn into before being blitted through the camera transform.
 	cam      camera
 	worldImg *ebiten.Image
 
-	// SnapshotPath is where the 's' key writes the population; saveMsg/saveMsgTTL
-	// drive a brief on-screen confirmation.
 	SnapshotPath string
 	saveMsg      string
 	saveMsgTTL   int
 }
 
-// NewGame returns a Game ready to be passed to ebiten.RunGame.
 func NewGame(w *sim.World) *Game {
 	return &Game{World: w, Speed: 1, cam: newCamera()}
 }
 
-// Update handles input and advances the simulation.
 func (g *Game) Update() error {
 	g.handleInput()
 	if !g.Paused {
@@ -81,7 +68,6 @@ func (g *Game) handleInput() {
 	g.refreshOverlays()
 }
 
-// handleSpeedKeys toggles pause and adjusts simulation speed.
 func (g *Game) handleSpeedKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		g.Paused = !g.Paused
@@ -95,7 +81,6 @@ func (g *Game) handleSpeedKeys() {
 	}
 }
 
-// handleViewKeys toggles the analysis overlays and handles the save key.
 func (g *Game) handleViewKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
 		g.analysisOn = !g.analysisOn
@@ -128,7 +113,6 @@ func (g *Game) handleViewKeys() {
 	}
 }
 
-// handleCamera applies wheel zoom, arrow-key panning, reset, and click-select.
 func (g *Game) handleCamera() {
 	mx, my := ebiten.CursorPosition()
 	if _, wy := ebiten.Wheel(); wy != 0 {
@@ -160,7 +144,6 @@ func (g *Game) handleCamera() {
 	}
 }
 
-// refreshOverlays recomputes whichever analysis overlay is active, on a throttle.
 func (g *Game) refreshOverlays() {
 	if g.analysisOn {
 		if g.framesToScan <= 0 {
@@ -185,7 +168,6 @@ func (g *Game) refreshOverlays() {
 	}
 }
 
-// Layout fixes the logical screen to the world size; Ebiten scales to the window.
 func (g *Game) Layout(_, _ int) (int, int) {
 	return int(g.World.W), int(g.World.H)
 }

@@ -13,10 +13,8 @@ import (
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-// Available reports whether the Ebiten window is compiled in.
 func Available() bool { return true }
 
-// Run resolves the configuration and opens the Ebiten window.
 func Run(o Config) error {
 	if o.PrintConfig {
 		enc := json.NewEncoder(os.Stdout)

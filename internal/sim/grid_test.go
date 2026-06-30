@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/vivarium/internal/geom"
 )
 
-// bruteNearestAgent finds the nearest living agent of kind k within radius by
-// scanning every agent — the reference the grid query must match.
 func bruteNearestAgent(w *World, pos geom.Vec2, k Kind, radius float64, exclude int) *Agent {
 	var best *Agent
 	bestD := radius
@@ -23,9 +21,6 @@ func bruteNearestAgent(w *World, pos geom.Vec2, k Kind, radius float64, exclude 
 	return best
 }
 
-// TestGridMatchesBruteForce checks that grid-accelerated nearest queries return
-// the same nearest agent (by distance) as a full linear scan, including near the
-// toroidal edges where the cell window wraps.
 func TestGridMatchesBruteForce(t *testing.T) {
 	rng := rand.New(rand.NewSource(123))
 	w := &World{W: 640, H: 480, rng: rng, params: DefaultParams()}

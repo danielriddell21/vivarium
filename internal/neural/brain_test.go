@@ -33,9 +33,6 @@ func TestForwardDeterministic(t *testing.T) {
 	}
 }
 
-// TestRecurrenceCarriesState verifies the network is stateful: feeding the same
-// input twice gives different outputs (the memory advanced), and Reset restores
-// the original response.
 func TestRecurrenceCarriesState(t *testing.T) {
 	b := New(rand.New(rand.NewSource(13)), 4, 6, 2)
 	in := []float64{0.5, -0.3, 0.2, 0.8}
@@ -62,7 +59,6 @@ func TestRecurrenceCarriesState(t *testing.T) {
 	}
 }
 
-// TestCloneResetsMemory checks that offspring do not inherit the parent's memory.
 func TestCloneResetsMemory(t *testing.T) {
 	b := New(rand.New(rand.NewSource(21)), 3, 4, 2)
 	b.Forward([]float64{1, 1, 1}) // advance the parent's state
@@ -131,8 +127,6 @@ func TestMutateZeroRateIsNoOp(t *testing.T) {
 	}
 }
 
-// TestLearnModifiesLiveNotGenome verifies in-lifetime learning adapts the working
-// weights while leaving the heritable genome untouched.
 func TestLearnModifiesLiveNotGenome(t *testing.T) {
 	b := New(rand.New(rand.NewSource(5)), 4, 5, 2)
 	genomeBefore := append([]float64(nil), b.genome.WHO...)
@@ -150,9 +144,6 @@ func TestLearnModifiesLiveNotGenome(t *testing.T) {
 	}
 }
 
-// TestLearnReinforcesOutput checks the rule moves outputs in the rewarded
-// direction: repeatedly rewarding the response to a fixed input should amplify the
-// dominant output over time.
 func TestLearnReinforcesOutput(t *testing.T) {
 	b := New(rand.New(rand.NewSource(8)), 4, 6, 2)
 	in := []float64{0.8, -0.2, 0.5, 0.3}
@@ -178,8 +169,6 @@ func TestLearnReinforcesOutput(t *testing.T) {
 	}
 }
 
-// TestFromGenomeRoundTrip checks a brain rebuilt from its genome reproduces the
-// original's response from a blank memory.
 func TestFromGenomeRoundTrip(t *testing.T) {
 	b := New(rand.New(rand.NewSource(4)), 7, 8, 3)
 	in := []float64{0.2, -0.1, 0.5, 0.9, -0.3, 0.0, 0.7}
@@ -200,8 +189,6 @@ func TestFromGenomeRoundTrip(t *testing.T) {
 	}
 }
 
-// TestCrossoverMixesParents checks each child genome weight comes from one parent
-// and the child starts unlearned (live == genome).
 func TestCrossoverMixesParents(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	a := New(rng, 4, 4, 2)
@@ -228,8 +215,6 @@ func TestCrossoverMixesParents(t *testing.T) {
 	}
 }
 
-// TestCloneInheritsGenomeNotLearning confirms Baldwinian inheritance: a child
-// starts from the parent's genome, not its learned live weights.
 func TestCloneInheritsGenomeNotLearning(t *testing.T) {
 	b := New(rand.New(rand.NewSource(17)), 4, 4, 2)
 	for i := 0; i < 30; i++ {

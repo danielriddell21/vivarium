@@ -13,14 +13,6 @@ import (
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-// headlessCmd advances the ecosystem simulation without any GUI, for long
-// offline experiments and reproducible batch runs. It imports only the
-// simulation core (no Ebiten), so it needs no display and starts instantly. It
-// emits a CSV row of population and trait statistics every N ticks to stdout.
-//
-//	vivarium headless --seed 1 --ticks 20000 --every 200 > run.csv
-//	vivarium headless --config myconfig.json --ticks 50000 > run.csv
-//	vivarium headless --print-config > config.json
 func headlessCmd() *cobra.Command {
 	cfg := sim.DefaultConfig()
 	var (
@@ -82,7 +74,6 @@ func headlessCmd() *cobra.Command {
 	return cmd
 }
 
-// ov bundles the flag values that can override the config when set explicitly.
 type ov struct {
 	configPath                     string
 	plants, herbivores, carnivores int
@@ -90,7 +81,6 @@ type ov struct {
 	rescue                         bool
 }
 
-// resolveConfig applies precedence defaults < config file < explicitly-set flags.
 func resolveConfig(fl *pflag.FlagSet, cfg sim.Config, o ov) (sim.Config, error) {
 	if o.configPath != "" {
 		c, err := sim.LoadConfig(o.configPath)
@@ -123,7 +113,6 @@ func resolveConfig(fl *pflag.FlagSet, cfg sim.Config, o ov) (sim.Config, error) 
 	return cfg, nil
 }
 
-// printDefaultConfig writes the default config as indented JSON to stdout.
 func printDefaultConfig() error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -133,7 +122,6 @@ func printDefaultConfig() error {
 	return nil
 }
 
-// buildWorld constructs the world, loading from a snapshot when loadPath is set.
 func buildWorld(rng *rand.Rand, cfg sim.Config, loadPath string) (*sim.World, error) {
 	if loadPath != "" {
 		snap, err := sim.LoadSnapshotFile(loadPath)
@@ -145,7 +133,6 @@ func buildWorld(rng *rand.Rand, cfg sim.Config, loadPath string) (*sim.World, er
 	return sim.NewWorld(rng, cfg), nil
 }
 
-// simulate advances the world, emitting a CSV stats row every `every` ticks.
 func simulate(w *sim.World, ticks, every int) error {
 	out := bufio.NewWriter(os.Stdout)
 	fmt.Fprintln(out, "tick,plants,herbivores,carnivores,meanGen,maxGen,meanSize,meanSpeed,meanSense,meanPlast,meanCurio,meanDrift,lineages")
@@ -161,7 +148,6 @@ func simulate(w *sim.World, ticks, every int) error {
 	return nil
 }
 
-// saveFinal writes the final population snapshot when savePath is set.
 func saveFinal(w *sim.World, savePath string) error {
 	if savePath == "" {
 		return nil
@@ -173,7 +159,6 @@ func saveFinal(w *sim.World, savePath string) error {
 	return nil
 }
 
-// writeStats emits one CSV row summarising the living population.
 func writeStats(out *bufio.Writer, w *sim.World, tick int) {
 	c := w.CountKinds()
 	var n, sumGen, maxGen int

@@ -1,18 +1,3 @@
-// Package neural implements a tiny hand-rolled recurrent neural network used as
-// an agent's "brain". Behaviour is shaped by two processes:
-//
-//   - Evolution (between generations): offspring inherit the parent's GENOME
-//     weights with small Gaussian mutations. There is no backpropagation.
-//   - In-lifetime learning (within a generation): a brain adapts a working copy
-//     of its weights from a scalar reward via a reward-modulated Hebbian rule.
-//
-// The two are kept separate (Baldwinian, not Lamarckian): only the genome is
-// inherited, so what an individual learns during its life is NOT passed to its
-// offspring — they re-grow the same plastic phenotype from the inherited genome
-// and must learn again. This lets learning and evolution be studied independently.
-//
-// The implementation deliberately uses flat float64 slices and a few loops rather
-// than any external ML/matrix library.
 package neural
 
 import (
@@ -20,15 +5,8 @@ import (
 	"math/rand"
 )
 
-// weightCap bounds every working weight so the unsupervised Hebbian rule cannot
-// run away to infinity over a long life.
 const weightCap = 8.0
 
-// weights is one full set of network parameters in flat row-major slices:
-//
-//	WIH has Hidden*In entries:     WIH[h*In + i]     connects input i  -> hidden h.
-//	WCH has Hidden*Hidden entries: WCH[h*Hidden + c] connects context c -> hidden h.
-//	WHO has Out*Hidden entries:    WHO[o*Hidden + h] connects hidden h -> output o.
 type weights struct {
 	WIH, WCH, BH, WHO, BO []float64
 }
@@ -53,28 +31,20 @@ func (w weights) clone() weights {
 	}
 }
 
-// Brain is a single-hidden-layer Elman recurrent network with tanh activations on
-// both the hidden and output layers, so every output is bounded in (-1, 1). The
-// previous tick's hidden activations are fed back into the hidden layer (the
-// recurrent context, or memory), giving agents a one-step memory.
 type Brain struct {
 	In, Hidden, Out int
 
-	genome weights // heritable initial weights; never modified after birth
-	live   weights // working weights: used by Forward, adapted by Learn
+	genome weights
+	live   weights
 
-	state []float64 // previous hidden activations (the recurrent context)
+	state []float64
 
-	// Activations cached from the most recent Forward, used by Learn.
 	lastIn      []float64
 	lastContext []float64
 	lastHidden  []float64
 	lastOut     []float64
 }
 
-// New returns a Brain with the given layer sizes and small random genome weights
-// drawn from rng. The live weights start as a copy of the genome and the recurrent
-// state starts blank.
 func New(rng *rand.Rand, in, hidden, out int) *Brain {
 	g := newWeights(in, hidden, out)
 	for i := range g.WIH {
@@ -95,10 +65,6 @@ func New(rng *rand.Rand, in, hidden, out int) *Brain {
 	}
 }
 
-// Forward runs the network on inputs for one tick using the live weights, returns
-// a freshly allocated slice of Out activations, and advances the recurrent state.
-// It caches the activations so a subsequent Learn call can adapt the weights. If
-// len(inputs) != In the input is treated as zero-padded or truncated.
 func (b *Brain) Forward(inputs []float64) []float64 {
 	// Cache the (padded) inputs and the context that feeds this pass.
 	in := resize(b.lastIn, b.In)
@@ -142,12 +108,6 @@ func (b *Brain) Forward(inputs []float64) []float64 {
 	return out
 }
 
-// Learn applies one reward-modulated Hebbian update to the live weights using the
-// activations cached by the most recent Forward. The signed modulator scales the
-// update: a connection between two co-active units is strengthened when the
-// modulator is positive and weakened when negative — so behaviour that preceded
-// reward is reinforced. rate is the per-agent learning rate (0 disables learning).
-// Weights are clamped to ±weightCap.
 func (b *Brain) Learn(modulator, rate float64) {
 	if rate == 0 || modulator == 0 || b.lastHidden == nil {
 		return
@@ -176,22 +136,16 @@ func (b *Brain) Learn(modulator, rate float64) {
 	}
 }
 
-// Reset clears the recurrent memory back to a blank slate.
 func (b *Brain) Reset() {
 	for i := range b.state {
 		b.state[i] = 0
 	}
 }
 
-// State returns a copy of the current recurrent memory (the previous hidden
-// activations), for inspection/visualisation.
 func (b *Brain) State() []float64 {
 	return append([]float64(nil), b.state...)
 }
 
-// Genome returns a flat copy of all heritable weights (the brain's identity in
-// genome space), in a fixed order. Brains with the same layer sizes return
-// vectors of the same length, so they can be compared/clustered.
 func (b *Brain) Genome() []float64 {
 	g := make([]float64, 0, len(b.genome.WIH)+len(b.genome.WCH)+len(b.genome.BH)+len(b.genome.WHO)+len(b.genome.BO))
 	g = append(g, b.genome.WIH...)
@@ -202,10 +156,6 @@ func (b *Brain) Genome() []float64 {
 	return g
 }
 
-// FromGenome rebuilds a brain of the given layer sizes from a flat genome produced
-// by Genome (same field order). The live weights start as a copy of the genome and
-// the memory is blank. It returns nil if the genome length does not match the
-// requested dimensions.
 func FromGenome(in, hidden, out int, genome []float64) *Brain {
 	g := newWeights(in, hidden, out)
 	need := len(g.WIH) + len(g.WCH) + len(g.BH) + len(g.WHO) + len(g.BO)
@@ -230,9 +180,6 @@ func FromGenome(in, hidden, out int, genome []float64) *Brain {
 	}
 }
 
-// LearnedDrift reports the mean absolute difference between the live weights and
-// the genome — i.e. how far in-lifetime learning has moved the phenotype away from
-// the inherited starting point. It is 0 at birth and for non-plastic agents.
 func (b *Brain) LearnedDrift() float64 {
 	var sum float64
 	var n int
@@ -253,9 +200,6 @@ func (b *Brain) LearnedDrift() float64 {
 	return sum / float64(n)
 }
 
-// Clone returns a new brain that inherits this brain's GENOME (its birth weights,
-// unaffected by any learning). The offspring's live weights start as a copy of
-// that genome and its memory is blank — nothing learned in life is inherited.
 func (b *Brain) Clone() *Brain {
 	g := b.genome.clone()
 	return &Brain{
@@ -266,10 +210,6 @@ func (b *Brain) Clone() *Brain {
 	}
 }
 
-// CrossoverWith returns a child brain whose GENOME is a uniform (per-weight) mix
-// of this brain's and other's genomes — each weight inherited at random from one
-// parent. The child's live weights start as a copy of that genome and its memory
-// is blank. Both parents must share the same layer sizes.
 func (b *Brain) CrossoverWith(rng *rand.Rand, other *Brain) *Brain {
 	g := newWeights(b.In, b.Hidden, b.Out)
 	mix := func(dst, x, y []float64) {
@@ -294,9 +234,6 @@ func (b *Brain) CrossoverWith(rng *rand.Rand, other *Brain) *Brain {
 	}
 }
 
-// Mutate perturbs the genome in place (each weight, with probability rate, nudged
-// by Gaussian noise scaled by std) and resets the live weights to match. This is
-// the sole mechanism by which inherited behaviour changes between generations.
 func (b *Brain) Mutate(rng *rand.Rand, rate, std float64) {
 	mut := func(s []float64) {
 		for i := range s {
@@ -323,7 +260,6 @@ func clampW(v float64) float64 {
 	return v
 }
 
-// resize returns a slice of length n, reusing s's backing array when possible.
 func resize(s []float64, n int) []float64 {
 	if cap(s) >= n {
 		return s[:n]
@@ -331,7 +267,6 @@ func resize(s []float64, n int) []float64 {
 	return make([]float64, n)
 }
 
-// appendTo copies src into a reused dst slice.
 func appendTo(dst, src []float64) []float64 {
 	dst = resize(dst, len(src))
 	copy(dst, src)

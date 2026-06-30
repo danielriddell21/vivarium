@@ -13,10 +13,8 @@ import (
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-const maxLineageBands = 8 // distinct lineages drawn before the rest become "other"
+const maxLineageBands = 8
 
-// lineagePalette colours the tracked lineages. Distinct from the species palette
-// so the two views read differently.
 var lineagePalette = []color.RGBA{
 	{0xe6, 0x6b, 0x6b, 0xff},
 	{0x6b, 0xb6, 0xe6, 0xff},
@@ -30,16 +28,12 @@ var lineagePalette = []color.RGBA{
 
 var colOther = color.RGBA{0x60, 0x60, 0x60, 0xff}
 
-// lineageView selects which lineages get their own band/colour and how to scale
-// the stacked chart.
 type lineageView struct {
 	topIDs   []int
-	colorOf  map[int]int // lineage ID -> palette index (top lineages only)
-	maxTotal int         // peak total population across the recorded history
+	colorOf  map[int]int
+	maxTotal int
 }
 
-// computeLineageView picks the most prominent lineages (by peak abundance) from
-// the world's lineage history. It is read-only and does not touch the sim RNG.
 func computeLineageView(w *sim.World) *lineageView {
 	hist := w.LineageHistory()
 	peak := make(map[int]int)
@@ -76,9 +70,6 @@ func computeLineageView(w *sim.World) *lineageView {
 	return &lineageView{topIDs: ids, colorOf: colorOf, maxTotal: maxTotal}
 }
 
-// drawLineagePanel renders a stacked-area chart of lineage abundance over time in
-// the bottom-right, with each prominent lineage as a coloured band and the rest
-// lumped into grey "other".
 func (g *Game) drawLineagePanel(screen *ebiten.Image) {
 	lv := g.lineageView
 	const pw, ph = 232.0, 196.0

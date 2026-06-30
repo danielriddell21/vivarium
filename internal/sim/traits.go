@@ -2,20 +2,15 @@ package sim
 
 import "math/rand"
 
-// Traits are the heritable scalar (morphological) properties of an agent that
-// co-evolve alongside its neural brain. Like brain weights, they are passed to
-// offspring with small mutations, so body plan and behaviour adapt together.
 type Traits struct {
-	Size        float64 // radius in pixels; affects eating reach and draw size
-	MaxSpeed    float64 // maximum movement speed (pixels/tick)
-	SenseRadius float64 // how far the agent can perceive food/prey/predators
-	Plasticity  float64 // in-lifetime learning rate (0 = a fixed, non-learning brain)
-	Curiosity   float64 // weight of intrinsic (novelty) reward (0 = pure forager)
-	Diet        float64 // dietary preference 0..1 across food types (herbivores)
+	Size        float64
+	MaxSpeed    float64
+	SenseRadius float64
+	Plasticity  float64
+	Curiosity   float64
+	Diet        float64
 }
 
-// crossover combines two parents' traits, inheriting each trait at random from one
-// parent (uniform crossover), to pair with sexual genome crossover.
 func (t Traits) crossover(rng *rand.Rand, o Traits) Traits {
 	pick := func(a, b float64) float64 {
 		if rng.Float64() < 0.5 {
@@ -33,8 +28,6 @@ func (t Traits) crossover(rng *rand.Rand, o Traits) Traits {
 	}
 }
 
-// edibility returns how efficiently a herbivore with the given Diet digests food
-// of foodType: 1.0 for a perfect match, falling to 0 at the opposite preference.
 func edibility(diet float64, foodType int) float64 {
 	tv := 0.0
 	if NumFoodTypes > 1 {
@@ -54,14 +47,13 @@ func abs(x float64) float64 {
 	return x
 }
 
-// Trait bounds keep mutated morphologies physically sensible.
 const (
 	minSize, maxSize           = 2.0, 9.0
 	minSpeed, maxSpeed         = 0.4, 3.5
 	minSense, maxSense         = 30.0, 220.0
 	minPlast, maxPlast         = 0.0, 0.04
 	minCurio, maxCurio         = 0.0, 1.5
-	traitMutationStdFractional = 0.12 // mutation std as a fraction of the value
+	traitMutationStdFractional = 0.12
 )
 
 func clamp(v, lo, hi float64) float64 {
@@ -74,8 +66,6 @@ func clamp(v, lo, hi float64) float64 {
 	return v
 }
 
-// defaultTraits returns the starting morphology for a freshly spawned agent of
-// the given kind, with a little per-individual randomness from rng.
 func defaultTraits(rng *rand.Rand, k Kind) Traits {
 	jitter := func(base float64) float64 { return base * (0.85 + 0.3*rng.Float64()) }
 	switch k {
@@ -100,8 +90,6 @@ func defaultTraits(rng *rand.Rand, k Kind) Traits {
 	}
 }
 
-// mutated returns a copy of t with each trait perturbed by Gaussian noise and
-// clamped to its allowed range.
 func (t Traits) mutated(rng *rand.Rand) Traits {
 	nudge := func(v, lo, hi float64) float64 {
 		v += rng.NormFloat64() * traitMutationStdFractional * v

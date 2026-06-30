@@ -1,4 +1,3 @@
-// Package cli wires together the root Cobra command and all subcommands.
 package cli
 
 import (
@@ -10,7 +9,6 @@ import (
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-// Execute builds and runs the root command. Returns non-nil on error.
 func Execute(version string) error {
 	cfg := sim.DefaultConfig()
 	var o gui.Config

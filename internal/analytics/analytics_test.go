@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// TestKMeansSeparatesClusters builds three well-separated blobs and checks that
-// k-means assigns each blob to a single cluster.
 func TestKMeansSeparatesClusters(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	centers := [][]float64{{0, 0}, {10, 10}, {0, 10}}
@@ -52,9 +50,6 @@ func TestKMeansFewerPointsThanK(t *testing.T) {
 	}
 }
 
-// TestKMeansWarmStartKeepsLabels verifies that warm-starting from a previous run's
-// centroids keeps cluster labels attached to the same regions when the data shifts
-// slightly — the property that stops the species view's colours from flashing.
 func TestKMeansWarmStartKeepsLabels(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	centers := [][]float64{{0, 0}, {10, 0}, {0, 10}, {10, 10}}
@@ -94,9 +89,6 @@ func TestKMeansWarmStartKeepsLabels(t *testing.T) {
 	}
 }
 
-// TestPCAFindsPrincipalAxis projects points stretched along a known diagonal and
-// checks the first component captures most of the variance (range along axis 0 is
-// much larger than along axis 1).
 func TestPCAFindsPrincipalAxis(t *testing.T) {
 	rng := rand.New(rand.NewSource(2))
 	var pts [][]float64

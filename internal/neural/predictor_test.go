@@ -2,8 +2,6 @@ package neural
 
 import "testing"
 
-// TestPredictorLearns checks the forward model reduces its prediction error on a
-// repeated transition via online SGD — the core of the curiosity signal.
 func TestPredictorLearns(t *testing.T) {
 	p := NewPredictor(3, 2)
 	feat := []float64{0.5, -0.2, 1.0}
@@ -22,8 +20,6 @@ func TestPredictorLearns(t *testing.T) {
 	}
 }
 
-// TestPredictorSurpriseDropsOnFamiliarity verifies that a novel target is more
-// surprising than one the model has already been trained on.
 func TestPredictorSurpriseDropsOnFamiliarity(t *testing.T) {
 	p := NewPredictor(2, 2)
 	feat := []float64{1.0, 0.5}

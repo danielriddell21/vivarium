@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// bigConfig has enough agents to exercise the parallel think path (active count
-// above parallelThinkThreshold).
 func bigConfig() Config {
 	c := DefaultConfig()
 	c.Width, c.Height = 1200, 900
@@ -15,9 +13,6 @@ func bigConfig() Config {
 	return c
 }
 
-// TestParallelDeterminism runs a large world (parallel think phase active) twice
-// from the same seed and requires identical trajectories — concurrency must not
-// affect results. Run with -race to also catch data races in the think phase.
 func TestParallelDeterminism(t *testing.T) {
 	run := func() []Counts {
 		w := NewWorld(rand.New(rand.NewSource(123)), bigConfig())

@@ -10,12 +10,6 @@ import (
 	"github.com/danielriddell21/vivarium/internal/neural"
 )
 
-// Snapshot is a serialisable capture of a world's population and terrain. It is
-// self-contained: combined with a fresh RNG it rebuilds a runnable world (see
-// NewWorldFromSnapshot). Loading is not a bit-exact resume — transient state (the
-// RNG stream, recurrent memory, learned weights, reward baselines) is intentionally
-// not stored — but it preserves the evolved genomes, traits, and genealogy so a
-// population can be saved, shared, and used to seed further runs.
 type Snapshot struct {
 	Config    Config          `json:"config"`
 	Tick      int             `json:"tick"`
@@ -27,7 +21,6 @@ type Snapshot struct {
 	Agents    []AgentSnapshot `json:"agents"`
 }
 
-// AgentSnapshot is the heritable and identity state of one agent.
 type AgentSnapshot struct {
 	Kind          Kind      `json:"kind"`
 	Pos           geom.Vec2 `json:"pos"`
@@ -43,7 +36,6 @@ type AgentSnapshot struct {
 	Genome        []float64 `json:"genome"`
 }
 
-// Snapshot captures the world's current living population and terrain.
 func (w *World) Snapshot() Snapshot {
 	s := Snapshot{
 		Config:    w.config(),
@@ -68,8 +60,6 @@ func (w *World) Snapshot() Snapshot {
 	return s
 }
 
-// config reconstructs a Config describing the world's rules (the initial-population
-// counts are irrelevant once a snapshot is loaded and are left at the live counts).
 func (w *World) config() Config {
 	c := w.CountKinds()
 	return Config{
@@ -81,9 +71,6 @@ func (w *World) config() Config {
 	}
 }
 
-// NewWorldFromSnapshot rebuilds a world from a snapshot, reconstructing each agent
-// from its stored genome. New IDs are assigned; lineage IDs are preserved (with the
-// next-ID counter advanced past them) so the lineage/phylogeny views stay coherent.
 func NewWorldFromSnapshot(rng *rand.Rand, s Snapshot) *World {
 	w := &World{
 		W: s.Config.Width, H: s.Config.Height,
@@ -121,7 +108,6 @@ func NewWorldFromSnapshot(rng *rand.Rand, s Snapshot) *World {
 	return w
 }
 
-// SaveSnapshot writes a snapshot to path as indented JSON.
 func SaveSnapshot(path string, s Snapshot) error {
 	data, err := json.MarshalIndent(s, "", " ")
 	if err != nil {
@@ -133,7 +119,6 @@ func SaveSnapshot(path string, s Snapshot) error {
 	return nil
 }
 
-// LoadSnapshotFile reads a snapshot from a JSON file.
 func LoadSnapshotFile(path string) (Snapshot, error) {
 	var s Snapshot
 	data, err := os.ReadFile(path)

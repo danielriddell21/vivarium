@@ -12,7 +12,6 @@ import (
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-// drawHUD shows the run state, live counts, and control hints in the top-left.
 func (g *Game) drawHUD(screen *ebiten.Image) {
 	c := g.World.CountKinds()
 	state := "RUNNING"
@@ -33,15 +32,12 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	}
 }
 
-// graph geometry (bottom-left).
 const (
 	graphW      = 280.0
 	graphH      = 90.0
 	graphMargin = 8.0
 )
 
-// drawGraph plots plant/herbivore/carnivore counts over time as three polylines,
-// each auto-scaled to the panel height by the running maximum.
 func (g *Game) drawGraph(screen *ebiten.Image) {
 	hist := g.World.History()
 	gx := graphMargin
@@ -81,7 +77,6 @@ func (g *Game) drawGraph(screen *ebiten.Image) {
 	drawText(screen, fmt.Sprintf("max %d", maxV), gx+graphW-60, gy+2, colText)
 }
 
-// drawInspector renders the selected agent's stats and live brain I/O on the right.
 func (g *Game) drawInspector(screen *ebiten.Image) {
 	a := g.Selected
 	if a == nil {
@@ -143,8 +138,6 @@ func (g *Game) drawInspector(screen *ebiten.Image) {
 	drawBars(screen, a.LastMemory, px+8, y, 208, 18)
 }
 
-// drawLevelBars renders a row of upward bars for values in [0, 1] in clr, from a
-// baseline at the bottom of the strip.
 func drawLevelBars(screen *ebiten.Image, vals []float64, x, y, w, h float64, clr color.Color) {
 	if len(vals) == 0 {
 		return
@@ -165,8 +158,6 @@ func drawLevelBars(screen *ebiten.Image, vals []float64, x, y, w, h float64, clr
 	}
 }
 
-// drawBars renders a row of signed bars for values in [-1, 1]: each bar grows up
-// (green) for positive values and down (red) for negative, from a centre line.
 func drawBars(screen *ebiten.Image, vals []float64, x, y, w, h float64) {
 	if len(vals) == 0 {
 		return
@@ -194,7 +185,6 @@ func drawBars(screen *ebiten.Image, vals []float64, x, y, w, h float64) {
 	}
 }
 
-// drawVector prints a labelled list of values and returns the next y position.
 func drawVector(screen *ebiten.Image, vals []float64, labels []string, x, y float64) float64 {
 	for i, v := range vals {
 		label := ""

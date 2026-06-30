@@ -6,18 +6,8 @@ import (
 	"github.com/danielriddell21/vivarium/internal/geom"
 )
 
-// gridCellSize is the side length of a spatial bucket, in world units. It is a
-// balance: large enough that a typical sense query touches only a handful of
-// cells, small enough that each cell holds few entities.
 const gridCellSize = 80.0
 
-// spatialGrid buckets foods and agents by cell so that neighbour queries cost
-// roughly O(local density) instead of O(total population). The grid is rebuilt
-// once per tick from the authoritative entity slices, so bucket contents are in a
-// deterministic order (slice order) — important for reproducible runs.
-//
-// Queries are toroidal: the cell window wraps around the world edges, matching the
-// wrap-around topology used everywhere else.
 type spatialGrid struct {
 	w, h       float64
 	cellSize   float64
@@ -37,15 +27,12 @@ func newSpatialGrid(w, h, cellSize float64) *spatialGrid {
 	}
 }
 
-// cellIndex maps a position to its flat bucket index.
 func (g *spatialGrid) cellIndex(p geom.Vec2) int {
 	col := clampInt(int(p.X/g.cellSize), 0, g.cols-1)
 	row := clampInt(int(p.Y/g.cellSize), 0, g.rows-1)
 	return row*g.cols + col
 }
 
-// rebuild clears the grid and re-buckets the given entities. Dead agents are
-// skipped. Backing slices are reused to avoid per-tick allocation.
 func (g *spatialGrid) rebuild(foods []*Food, agents []*Agent) {
 	for i := range g.foodCells {
 		g.foodCells[i] = g.foodCells[i][:0]
@@ -66,9 +53,6 @@ func (g *spatialGrid) rebuild(foods []*Food, agents []*Agent) {
 	}
 }
 
-// forEachCellNear visits, exactly once each, the cells of the toroidal window that
-// covers the square [p-radius, p+radius]. Cells are visited in a fixed (row, col)
-// order so callers see a deterministic sequence.
 func (g *spatialGrid) forEachCellNear(p geom.Vec2, radius float64, fn func(idx int)) {
 	cmin := int(math.Floor((p.X - radius) / g.cellSize))
 	cmax := int(math.Floor((p.X + radius) / g.cellSize))
@@ -88,9 +72,6 @@ func (g *spatialGrid) forEachCellNear(p geom.Vec2, radius float64, fn func(idx i
 	}
 }
 
-// forEachFoodNear calls fn for every food in cells overlapping the query window.
-// Candidates may lie slightly outside radius (cells are square); callers that need
-// an exact radius must re-check distance.
 func (g *spatialGrid) forEachFoodNear(p geom.Vec2, radius float64, fn func(*Food)) {
 	g.forEachCellNear(p, radius, func(idx int) {
 		for _, f := range g.foodCells[idx] {
@@ -99,7 +80,6 @@ func (g *spatialGrid) forEachFoodNear(p geom.Vec2, radius float64, fn func(*Food
 	})
 }
 
-// forEachAgentNear calls fn for every agent in cells overlapping the query window.
 func (g *spatialGrid) forEachAgentNear(p geom.Vec2, radius float64, fn func(*Agent)) {
 	g.forEachCellNear(p, radius, func(idx int) {
 		for _, a := range g.agentCells[idx] {
@@ -108,7 +88,6 @@ func (g *spatialGrid) forEachAgentNear(p geom.Vec2, radius float64, fn func(*Age
 	})
 }
 
-// mod returns a value in [0, n) for any integer x (Go's % keeps the sign).
 func mod(x, n int) int {
 	x %= n
 	if x < 0 {

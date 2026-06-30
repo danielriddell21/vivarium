@@ -12,28 +12,21 @@ import (
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-const maxPhyloLeaves = 60 // living agents sampled as leaves of the drawn tree
+const maxPhyloLeaves = 60
 
 type phyloPos struct {
-	x, y    float64 // normalised 0..1 (x = time, y = layout order)
+	x, y    float64
 	lineage int
 }
 
-// phyloView is a laid-out coalescent tree ready to draw.
 type phyloView struct {
 	pos     map[int]phyloPos
-	edges   [][2]int // parentID, childID (both present in pos)
+	edges   [][2]int
 	leafIDs []int
 	leaves  int
 	living  int
 }
 
-// computePhylogeny builds the genealogy of a sample of the living population: it
-// traces each sampled agent back through retained ancestors, then lays the induced
-// tree out with time on the x-axis. Read-only; no RNG.
-// samplePhyloLeaves returns the living agents that have a genealogy node,
-// sorted and thinned with a stride to at most maxPhyloLeaves, plus the total
-// living count before thinning.
 func samplePhyloLeaves(w *sim.World, gen map[int]*sim.GenealogyNode) (leaves []int, living int) {
 	for _, a := range w.Agents {
 		if a.Alive {
@@ -55,7 +48,6 @@ func samplePhyloLeaves(w *sim.World, gen map[int]*sim.GenealogyNode) (leaves []i
 	return leaves, living
 }
 
-// inducedAncestors returns the union of the root-ward paths from each leaf.
 func inducedAncestors(gen map[int]*sim.GenealogyNode, leaves []int) map[int]bool {
 	induced := make(map[int]bool)
 	for _, leaf := range leaves {
@@ -71,8 +63,6 @@ func inducedAncestors(gen map[int]*sim.GenealogyNode, leaves []int) map[int]bool
 	return induced
 }
 
-// buildInducedTree groups the induced nodes into parent->children and roots,
-// sorts each for deterministic layout, and returns the birth-tick span.
 func buildInducedTree(gen map[int]*sim.GenealogyNode, induced map[int]bool) (children map[int][]int, roots []int, minTick, maxTick int) {
 	children = make(map[int][]int)
 	minTick, maxTick = 1<<62, -(1 << 62)
@@ -147,8 +137,6 @@ func computePhylogeny(w *sim.World) *phyloView {
 	return pv
 }
 
-// drawPhylogenyPanel draws the coalescent tree as a rectangular dendrogram with
-// time increasing to the right, branches coloured by lineage.
 func (g *Game) drawPhylogenyPanel(screen *ebiten.Image) {
 	pv := g.phylo
 	px := g.World.W * 0.10

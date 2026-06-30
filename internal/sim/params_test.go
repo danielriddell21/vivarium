@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// TestLoadConfig writes a partial config file and checks it overlays the defaults.
 func TestLoadConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "cfg.json")
 	if err := os.WriteFile(path, []byte(`{"herbivores":3,"params":{"mutationStd":0.9}}`), 0o600); err != nil {
@@ -29,8 +28,6 @@ func TestLoadConfig(t *testing.T) {
 	}
 }
 
-// TestParamsAffectReproduction confirms a tuned Param actually changes behaviour:
-// an unreachable reproduction threshold means no agent ever gives birth.
 func TestParamsAffectReproduction(t *testing.T) {
 	cfg := testConfig()
 	cfg.Params.ReproThreshold = 1e9 // nobody can ever reach this
@@ -45,8 +42,6 @@ func TestParamsAffectReproduction(t *testing.T) {
 	}
 }
 
-// TestConfigJSONOverlay verifies the partial-override semantics the -config flag
-// relies on: fields present in the JSON win, everything else keeps its default.
 func TestConfigJSONOverlay(t *testing.T) {
 	cfg := DefaultConfig()
 	if err := json.Unmarshal([]byte(`{"plants":5,"params":{"moveCost":0.5}}`), &cfg); err != nil {
