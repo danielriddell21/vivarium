@@ -18,9 +18,8 @@ just gui        # run the Ebiten GUI
 just run        # run the headless batch simulator (vivarium headless)
 just test       # run unit tests
 just lint       # golangci-lint
+just fmt        # golangci-lint fmt (gofumpt + goimports)
 just ci         # lint + test + build
-just vet        # go vet
-just fmt        # gofmt
 just tidy       # go mod tidy
 ```
 
