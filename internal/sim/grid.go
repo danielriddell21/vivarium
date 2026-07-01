@@ -28,8 +28,8 @@ func newSpatialGrid(w, h, cellSize float64) *spatialGrid {
 }
 
 func (g *spatialGrid) cellIndex(p geom.Vec2) int {
-	col := clampInt(int(p.X/g.cellSize), 0, g.cols-1)
-	row := clampInt(int(p.Y/g.cellSize), 0, g.rows-1)
+	col := clamp(int(p.X/g.cellSize), 0, g.cols-1)
+	row := clamp(int(p.Y/g.cellSize), 0, g.rows-1)
 	return row*g.cols + col
 }
 
@@ -94,14 +94,4 @@ func mod(x, n int) int {
 		x += n
 	}
 	return x
-}
-
-func clampInt(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
 }

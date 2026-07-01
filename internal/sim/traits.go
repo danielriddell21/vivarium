@@ -1,6 +1,10 @@
 package sim
 
-import "math/rand"
+import (
+	"cmp"
+	"math"
+	"math/rand"
+)
 
 type Traits struct {
 	Size        float64
@@ -33,18 +37,11 @@ func edibility(diet float64, foodType int) float64 {
 	if NumFoodTypes > 1 {
 		tv = float64(foodType) / float64(NumFoodTypes-1)
 	}
-	e := 1 - abs(diet-tv)
+	e := 1 - math.Abs(diet-tv)
 	if e < 0 {
 		e = 0
 	}
 	return e
-}
-
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
 
 const (
@@ -56,14 +53,8 @@ const (
 	traitMutationStdFractional = 0.12
 )
 
-func clamp(v, lo, hi float64) float64 {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
+func clamp[T cmp.Ordered](v, lo, hi T) T {
+	return max(lo, min(hi, v))
 }
 
 func defaultTraits(rng *rand.Rand, k Kind) Traits {

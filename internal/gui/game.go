@@ -3,6 +3,8 @@
 package gui
 
 import (
+	"cmp"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
@@ -74,10 +76,10 @@ func (g *Game) handleSpeedKeys() {
 	}
 	// '+' / '=' speed up, '-' slow down. Both keypad and main row are accepted.
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) || inpututil.IsKeyJustPressed(ebiten.KeyKPAdd) {
-		g.Speed = clampInt(g.Speed*2, minSpeed, maxSpeed)
+		g.Speed = clamp(g.Speed*2, minSpeed, maxSpeed)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) || inpututil.IsKeyJustPressed(ebiten.KeyKPSubtract) {
-		g.Speed = clampInt(g.Speed/2, minSpeed, maxSpeed)
+		g.Speed = clamp(g.Speed/2, minSpeed, maxSpeed)
 	}
 }
 
@@ -172,12 +174,6 @@ func (g *Game) Layout(_, _ int) (int, int) {
 	return int(g.World.W), int(g.World.H)
 }
 
-func clampInt(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
+func clamp[T cmp.Ordered](v, lo, hi T) T {
+	return max(lo, min(hi, v))
 }

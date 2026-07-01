@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"slices"
 
 	"github.com/danielriddell21/vivarium/internal/geom"
 	"github.com/danielriddell21/vivarium/internal/neural"
@@ -81,13 +82,17 @@ func NewWorldFromSnapshot(rng *rand.Rand, s Snapshot) *World {
 		minHerb:      s.Config.MinHerbivores,
 		minCarn:      s.Config.MinCarnivores,
 		Tick:         s.Tick,
-		obstacles:    append([]Obstacle(nil), s.Obstacles...),
-		Foods:        append([]*Food(nil), s.Foods...),
+		obstacles:    slices.Clone(s.Obstacles),
+		Foods:        slices.Clone(s.Foods),
 	}
+	discarded := 0
 	for _, as := range s.Agents {
 		brain := neural.FromGenome(s.BrainIn, s.BrainHid, s.BrainOut, as.Genome)
 		if brain == nil {
+			// Genome shape no longer matches the configured brain (e.g. a
+			// snapshot from an incompatible build); start this agent fresh.
 			brain = neural.New(rng, BrainInputs, BrainHidden, BrainOutputs)
+			discarded++
 		}
 		w.nextID++
 		a := &Agent{
@@ -102,6 +107,9 @@ func NewWorldFromSnapshot(rng *rand.Rand, s Snapshot) *World {
 		}
 		w.Agents = append(w.Agents, a)
 		w.recordBirth(a)
+	}
+	if discarded > 0 {
+		fmt.Fprintf(os.Stderr, "vivarium: snapshot genome mismatch — reinitialised %d of %d agents with fresh brains\n", discarded, len(s.Agents))
 	}
 	w.reindex()
 	w.sampleHistory()

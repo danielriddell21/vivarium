@@ -23,7 +23,7 @@ func (c camera) screenToWorld(sx, sy float64) (float64, float64) {
 
 func (c *camera) zoomAt(factor, sx, sy, worldW, worldH float64) {
 	wx, wy := c.screenToWorld(sx, sy)
-	c.zoom = clampF(c.zoom*factor, 1, 12)
+	c.zoom = clamp(c.zoom*factor, 1, 12)
 	// Re-anchor so the same world point stays under the cursor.
 	c.x = wx - sx/c.zoom
 	c.y = wy - sy/c.zoom
@@ -39,16 +39,6 @@ func (c *camera) pan(dx, dy, worldW, worldH float64) {
 func (c *camera) clamp(worldW, worldH float64) {
 	maxX := worldW - worldW/c.zoom
 	maxY := worldH - worldH/c.zoom
-	c.x = clampF(c.x, 0, maxX)
-	c.y = clampF(c.y, 0, maxY)
-}
-
-func clampF(v, lo, hi float64) float64 {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
+	c.x = clamp(c.x, 0, maxX)
+	c.y = clamp(c.y, 0, maxY)
 }

@@ -16,9 +16,7 @@ func (w *World) thinkAll(active []*Agent) {
 		}
 		return
 	}
-	if workers > n {
-		workers = n
-	}
+	workers = min(workers, n)
 
 	chunk := (n + workers - 1) / workers
 	var wg sync.WaitGroup

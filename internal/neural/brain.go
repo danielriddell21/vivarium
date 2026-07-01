@@ -3,6 +3,7 @@ package neural
 import (
 	"math"
 	"math/rand"
+	"slices"
 )
 
 const weightCap = 8.0
@@ -23,11 +24,11 @@ func newWeights(in, hidden, out int) weights {
 
 func (w weights) clone() weights {
 	return weights{
-		WIH: append([]float64(nil), w.WIH...),
-		WCH: append([]float64(nil), w.WCH...),
-		BH:  append([]float64(nil), w.BH...),
-		WHO: append([]float64(nil), w.WHO...),
-		BO:  append([]float64(nil), w.BO...),
+		WIH: slices.Clone(w.WIH),
+		WCH: slices.Clone(w.WCH),
+		BH:  slices.Clone(w.BH),
+		WHO: slices.Clone(w.WHO),
+		BO:  slices.Clone(w.BO),
 	}
 }
 
