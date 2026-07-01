@@ -1,66 +1,54 @@
-// Package render wires the simulation to Ebiten: it draws the world, overlays
-// (population graph, HUD, inspector), and handles keyboard/mouse input. It is the
-// only package besides cmd that depends on Ebiten, keeping the simulation core
-// free of any graphics concerns.
-package render
+//go:build ebiten
+
+package gui
 
 import (
-	"github.com/danielriddell21/vivarium/internal/geom"
-	"github.com/danielriddell21/vivarium/internal/sim"
+	"cmp"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+
+	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 const (
-	maxSpeed = 32 // maximum simulation steps per displayed frame
+	maxSpeed = 32
 	minSpeed = 1
 )
 
-// Game adapts a sim.World to the ebiten.Game interface.
 type Game struct {
 	World    *sim.World
 	Paused   bool
-	Speed    int        // simulation steps per frame when running
-	Selected *sim.Agent // agent shown in the inspector, or nil
+	Speed    int
+	Selected *sim.Agent
 
-	// Analysis ("species") view: clusters the population in brain-genome space and
-	// projects it to 2D. Recomputed on a throttle so it stays cheap.
 	analysisOn   bool
 	analysis     *analysis
 	framesToScan int
 
-	// Lineage view: a stacked chart of lineage abundance over time, with agents
-	// coloured by lineage. Mutually exclusive with the species view.
 	lineageOn       bool
 	lineageView     *lineageView
 	framesToLineage int
 
-	// Phylogeny view: a coalescent genealogy tree of the living population.
 	phyloOn       bool
 	phylo         *phyloView
 	framesToPhylo int
 
-	// hideSignals suppresses the communication halos drawn around agents.
 	hideSignals bool
 
-	// cam pans/zooms the world view; worldImg is the offscreen buffer the world is
-	// drawn into before being blitted through the camera transform.
 	cam      camera
 	worldImg *ebiten.Image
 
-	// SnapshotPath is where the 's' key writes the population; saveMsg/saveMsgTTL
-	// drive a brief on-screen confirmation.
 	SnapshotPath string
 	saveMsg      string
 	saveMsgTTL   int
 }
 
-// NewGame returns a Game ready to be passed to ebiten.RunGame.
 func NewGame(w *sim.World) *Game {
 	return &Game{World: w, Speed: 1, cam: newCamera()}
 }
 
-// Update handles input and advances the simulation.
 func (g *Game) Update() error {
 	g.handleInput()
 	if !g.Paused {
@@ -76,17 +64,26 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) handleInput() {
+	g.handleSpeedKeys()
+	g.handleViewKeys()
+	g.handleCamera()
+	g.refreshOverlays()
+}
+
+func (g *Game) handleSpeedKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		g.Paused = !g.Paused
 	}
 	// '+' / '=' speed up, '-' slow down. Both keypad and main row are accepted.
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) || inpututil.IsKeyJustPressed(ebiten.KeyKPAdd) {
-		g.Speed = clampInt(g.Speed*2, minSpeed, maxSpeed)
+		g.Speed = clamp(g.Speed*2, minSpeed, maxSpeed)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) || inpututil.IsKeyJustPressed(ebiten.KeyKPSubtract) {
-		g.Speed = clampInt(g.Speed/2, minSpeed, maxSpeed)
+		g.Speed = clamp(g.Speed/2, minSpeed, maxSpeed)
 	}
+}
 
+func (g *Game) handleViewKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
 		g.analysisOn = !g.analysisOn
 		g.framesToScan = 0 // recompute immediately on enable
@@ -116,8 +113,9 @@ func (g *Game) handleInput() {
 	if g.saveMsgTTL > 0 {
 		g.saveMsgTTL--
 	}
+}
 
-	// Camera: mouse wheel zooms toward the cursor, arrow keys pan, 0 resets.
+func (g *Game) handleCamera() {
 	mx, my := ebiten.CursorPosition()
 	if _, wy := ebiten.Wheel(); wy != 0 {
 		factor := 1.1
@@ -142,13 +140,13 @@ func (g *Game) handleInput() {
 	if inpututil.IsKeyJustPressed(ebiten.Key0) {
 		g.cam = newCamera()
 	}
-
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		wx, wy := g.cam.screenToWorld(float64(mx), float64(my))
 		g.Selected = g.World.NearestAgent(geom.Vec2{X: wx, Y: wy})
 	}
+}
 
-	// Refresh the species analysis on a throttle while the view is on.
+func (g *Game) refreshOverlays() {
 	if g.analysisOn {
 		if g.framesToScan <= 0 {
 			g.analysis = computeAnalysis(g.World, g.analysis)
@@ -172,17 +170,10 @@ func (g *Game) handleInput() {
 	}
 }
 
-// Layout fixes the logical screen to the world size; Ebiten scales to the window.
 func (g *Game) Layout(_, _ int) (int, int) {
 	return int(g.World.W), int(g.World.H)
 }
 
-func clampInt(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
+func clamp[T cmp.Ordered](v, lo, hi T) T {
+	return max(lo, min(hi, v))
 }

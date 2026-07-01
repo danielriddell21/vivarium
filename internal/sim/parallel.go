@@ -5,14 +5,8 @@ import (
 	"sync"
 )
 
-// parallelThinkThreshold is the population below which the think phase runs
-// single-threaded: for small worlds the goroutine overhead outweighs the gain.
 const parallelThinkThreshold = 256
 
-// thinkAll runs every agent's sense+brain pass (Agent.think). That work is
-// read-only on shared state and writes only to per-agent fields, so it is safe to
-// run concurrently across a pool of workers sized to the machine. Results are
-// deterministic and identical to a sequential pass.
 func (w *World) thinkAll(active []*Agent) {
 	n := len(active)
 	workers := runtime.GOMAXPROCS(0)
@@ -22,9 +16,7 @@ func (w *World) thinkAll(active []*Agent) {
 		}
 		return
 	}
-	if workers > n {
-		workers = n
-	}
+	workers = min(workers, n)
 
 	chunk := (n + workers - 1) / workers
 	var wg sync.WaitGroup

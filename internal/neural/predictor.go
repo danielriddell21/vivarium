@@ -1,35 +1,18 @@
 package neural
 
-// Predictor is a tiny online-trained linear forward model: given a feature vector
-// (an agent's current senses concatenated with its chosen action) it predicts the
-// next tick's senses. It is trained by ordinary stochastic gradient descent on
-// mean-squared error — a genuinely gradient-based learner, hand-rolled, no library.
-//
-// Its purpose is curiosity: the prediction error on each transition measures how
-// "surprising" the new situation was. That error feeds the agent's reward as an
-// intrinsic motivation to seek novel, not-yet-predictable states. As the model
-// learns a region of the world the error there falls, so curiosity naturally fades
-// from the familiar and moves on — the standard intrinsic-motivation dynamic.
-//
-// Unlike the control brain, a Predictor is not inherited or evolved: every agent
-// starts with a blank model (predicting zero) and learns it from scratch in life.
 type Predictor struct {
 	In, Out int
 
-	W []float64 // Out*In weights, row-major: W[o*In + i]
-	B []float64 // Out biases
+	W []float64
+	B []float64
 }
 
-// predictorWeightCap bounds the linear weights so online SGD can't diverge.
 const predictorWeightCap = 10.0
 
-// NewPredictor returns a zero-initialised model (it initially predicts all zeros
-// and learns from there).
 func NewPredictor(in, out int) *Predictor {
 	return &Predictor{In: in, Out: out, W: make([]float64, out*in), B: make([]float64, out)}
 }
 
-// predict writes the model's output for feat into dst (length Out).
 func (p *Predictor) predict(feat, dst []float64) {
 	for o := 0; o < p.Out; o++ {
 		sum := p.B[o]
@@ -41,9 +24,6 @@ func (p *Predictor) predict(feat, dst []float64) {
 	}
 }
 
-// Train predicts target from feat, takes one SGD step on the mean-squared error to
-// reduce it, and returns the mean-squared error measured BEFORE the update — i.e.
-// the surprise of this transition. lr is the learning rate.
 func (p *Predictor) Train(feat, target []float64, lr float64) float64 {
 	pred := make([]float64, p.Out)
 	p.predict(feat, pred)

@@ -8,15 +8,12 @@ import (
 	"github.com/danielriddell21/vivarium/internal/neural"
 )
 
-// Sampling / retention cadence (not ecological tunables).
 const (
-	historyEvery = 6    // sample population counts every N ticks
-	maxHistory   = 1200 // cap on retained history samples
-	pruneEvery   = 120  // prune the genealogy to ancestors-of-living every N ticks
+	historyEvery = 6
+	maxHistory   = 1200
+	pruneEvery   = 120
 )
 
-// Config holds the initial-population, world-size, and tunable parameters. It is
-// JSON-serialisable so a run can be configured from a file.
 type Config struct {
 	Width  float64 `json:"width"`
 	Height float64 `json:"height"`
@@ -25,21 +22,16 @@ type Config struct {
 	Herbivores int `json:"herbivores"`
 	Carnivores int `json:"carnivores"`
 
-	TargetPlants int `json:"targetPlants"` // plant count the world tries to maintain
-	Obstacles    int `json:"obstacles"`    // number of impassable terrain rocks
+	TargetPlants int `json:"targetPlants"`
+	Obstacles    int `json:"obstacles"`
 
-	// Rescue enables a metapopulation "rescue effect": when a mobile tier drops
-	// below its floor, occasional immigrants arrive so the ecosystem recovers
-	// instead of collapsing to permanent extinction. Disable for raw dynamics.
 	Rescue        bool `json:"rescue"`
 	MinHerbivores int  `json:"minHerbivores"`
 	MinCarnivores int  `json:"minCarnivores"`
 
-	// Params are the tunable ecological/metabolic/learning scalars.
 	Params Params `json:"params"`
 }
 
-// DefaultConfig returns a balanced starting configuration.
 func DefaultConfig() Config {
 	return Config{
 		Width: 960, Height: 720,
@@ -53,13 +45,10 @@ func DefaultConfig() Config {
 	}
 }
 
-// Counts is a snapshot of population sizes for one history sample.
 type Counts struct {
 	Plants, Herbivores, Carnivores int
 }
 
-// World holds all simulation state. A single *rand.Rand drives every random
-// decision so that runs are fully reproducible from a seed.
 type World struct {
 	W, H   float64
 	Foods  []*Food
@@ -76,18 +65,14 @@ type World struct {
 	minHerb        int
 	minCarn        int
 	history        []Counts
-	lineageHistory []map[int]int          // per sample: lineage ID -> living count
-	genealogy      map[int]*GenealogyNode // retained ancestry of the living population
+	lineageHistory []map[int]int
+	genealogy      map[int]*GenealogyNode
 
 	grid      *spatialGrid
-	active    []*Agent // reused scratch: agents alive at the start of a tick
+	active    []*Agent
 	obstacles []Obstacle
 }
 
-// GenealogyNode is one agent's entry in the retained family tree. Nodes are kept
-// only while they are an ancestor of (or are) a living agent; once a whole branch
-// dies out it is pruned, so the retained set is the coalescent tree of the current
-// population.
 type GenealogyNode struct {
 	ID, ParentID int
 	BirthTick    int
@@ -95,7 +80,6 @@ type GenealogyNode struct {
 	Kind         Kind
 }
 
-// recordBirth adds a newly created agent to the genealogy.
 func (w *World) recordBirth(a *Agent) {
 	if w.genealogy == nil {
 		w.genealogy = make(map[int]*GenealogyNode)
@@ -106,9 +90,6 @@ func (w *World) recordBirth(a *Agent) {
 	}
 }
 
-// pruneGenealogy drops nodes that are neither alive nor an ancestor of a living
-// agent. Because descendants only ever appear under living nodes, a branch with no
-// living members can never regain one, so this pruning is permanent and safe.
 func (w *World) pruneGenealogy() {
 	if w.genealogy == nil {
 		return
@@ -137,12 +118,8 @@ func (w *World) pruneGenealogy() {
 	}
 }
 
-// Genealogy returns the retained ancestry of the living population (read-only).
 func (w *World) Genealogy() map[int]*GenealogyNode { return w.genealogy }
 
-// reindex rebuilds the spatial grid from the current entity positions. It is
-// called once per tick (and after world construction) so that all neighbour
-// queries within the tick share a consistent, deterministic index.
 func (w *World) reindex() {
 	if w.grid == nil {
 		w.grid = newSpatialGrid(w.W, w.H, gridCellSize)
@@ -150,8 +127,6 @@ func (w *World) reindex() {
 	w.grid.rebuild(w.Foods, w.Agents)
 }
 
-// NewWorld builds a world from cfg, seeding plants and agents at random
-// positions using rng.
 func NewWorld(rng *rand.Rand, cfg Config) *World {
 	w := &World{
 		W: cfg.Width, H: cfg.Height,
@@ -186,9 +161,6 @@ func (w *World) randPos() geom.Vec2 {
 	return geom.Vec2{X: w.rng.Float64() * w.W, Y: w.rng.Float64() * w.H}
 }
 
-// newAgent constructs an agent. If parentBrain is nil a fresh random brain and
-// default traits are created (founder agents); otherwise the brain/traits are
-// inherited copies that the caller has already mutated.
 func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Traits, gen int) *Agent {
 	w.nextID++
 	if brain == nil {
@@ -221,7 +193,6 @@ func (w *World) newAgent(k Kind, pos geom.Vec2, brain *neural.Brain, traits Trai
 	return a
 }
 
-// Step advances the simulation by one tick.
 func (w *World) Step() {
 	for _, f := range w.Foods {
 		w.regrowFood(f)
@@ -284,7 +255,6 @@ func (w *World) Step() {
 	}
 }
 
-// resolveEat handles a feeding attempt for one agent.
 func (w *World) resolveEat(a *Agent) {
 	switch a.Kind {
 	case Herbivore:
@@ -307,8 +277,6 @@ func (w *World) resolveEat(a *Agent) {
 	}
 }
 
-// findMate returns the nearest mature same-kind agent within mating range of a,
-// or nil if there is none — the partner for sexual reproduction.
 func (w *World) findMate(a *Agent) *Agent {
 	var best *Agent
 	bestD := w.params.MateRadius
@@ -323,11 +291,6 @@ func (w *World) findMate(a *Agent) *Agent {
 	return best
 }
 
-// reproduce spawns a mutated offspring next to the parent and splits the parent's
-// energy with it. With sexual reproduction enabled and a mate nearby, the child's
-// genome and traits are a crossover of both parents; otherwise it is an asexual
-// clone of the initiating parent. Only the initiating parent pays the energy cost,
-// so the energy economy is unchanged either way.
 func (w *World) reproduce(parent *Agent) *Agent {
 	child := parent.Energy / 2
 	parent.Energy -= child
@@ -362,7 +325,6 @@ func (w *World) reproduce(parent *Agent) *Agent {
 	return off
 }
 
-// compactDead removes dead agents in place, preserving order.
 func (w *World) compactDead() {
 	keep := w.Agents[:0]
 	for _, a := range w.Agents {
@@ -373,17 +335,12 @@ func (w *World) compactDead() {
 	w.Agents = keep
 }
 
-// maintainFood tops the world up toward its target plant count, adding at most
-// one plant per tick to keep regrowth gradual.
 func (w *World) maintainFood() {
 	if len(w.Foods) < w.targetPlants && w.rng.Float64() < 0.5 {
 		w.Foods = append(w.Foods, &Food{Pos: w.randPos(), Energy: w.params.FoodBiteEnergy, Type: w.rng.Intn(NumFoodTypes)})
 	}
 }
 
-// maintainPopulations applies the rescue effect: when a mobile tier sits below
-// its floor, immigrants occasionally arrive so the ecosystem can recover from a
-// near-collapse rather than going extinct for good.
 func (w *World) maintainPopulations() {
 	if !w.rescue {
 		return
@@ -397,9 +354,6 @@ func (w *World) maintainPopulations() {
 	}
 }
 
-// immigrate introduces a single new agent of kind k. If any member of that tier
-// survives, the newcomer descends from a random survivor (cloned, mutated brain
-// and traits) so evolution continues; otherwise it arrives with a fresh brain.
 func (w *World) immigrate(k Kind) {
 	var brain *neural.Brain
 	var traits Traits
@@ -415,7 +369,6 @@ func (w *World) immigrate(k Kind) {
 	w.Agents = append(w.Agents, a)
 }
 
-// randomAgentOfKind returns a uniformly random living agent of kind k, or nil.
 func (w *World) randomAgentOfKind(k Kind) *Agent {
 	var chosen *Agent
 	seen := 0
@@ -431,7 +384,6 @@ func (w *World) randomAgentOfKind(k Kind) *Agent {
 	return chosen
 }
 
-// nearestRipeFood returns the closest ripe plant within radius of pos, or nil.
 func (w *World) nearestRipeFood(pos geom.Vec2, radius float64) *Food {
 	var best *Food
 	bestD := radius
@@ -446,8 +398,6 @@ func (w *World) nearestRipeFood(pos geom.Vec2, radius float64) *Food {
 	return best
 }
 
-// nearestAgentOfKind returns the closest living agent of kind k within radius of
-// pos, excluding the agent with id excludeID, or nil.
 func (w *World) nearestAgentOfKind(pos geom.Vec2, k Kind, radius float64, excludeID int) *Agent {
 	var best *Agent
 	bestD := radius
@@ -462,7 +412,6 @@ func (w *World) nearestAgentOfKind(pos geom.Vec2, k Kind, radius float64, exclud
 	return best
 }
 
-// CountKinds returns the current population sizes.
 func (w *World) CountKinds() Counts {
 	c := Counts{Plants: len(w.Foods)}
 	for _, a := range w.Agents {
@@ -497,15 +446,10 @@ func (w *World) sampleHistory() {
 	}
 }
 
-// History returns the retained population-count samples (oldest first).
 func (w *World) History() []Counts { return w.history }
 
-// LineageHistory returns per-sample maps of lineage ID -> living count (oldest
-// first), for visualising how lineages rise and fall over time.
 func (w *World) LineageHistory() []map[int]int { return w.lineageHistory }
 
-// NearestAgent returns the living agent closest to pos (ignoring wrap, since this
-// is used for screen-space clicks), or nil if there are no living agents.
 func (w *World) NearestAgent(pos geom.Vec2) *Agent {
 	var best *Agent
 	bestD := math.MaxFloat64

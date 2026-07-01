@@ -1,4 +1,6 @@
-package render
+//go:build ebiten
+
+package gui
 
 import (
 	"fmt"
@@ -6,47 +8,41 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/danielriddell21/vivarium/internal/analytics"
-	"github.com/danielriddell21/vivarium/internal/sim"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/danielriddell21/vivarium/internal/analytics"
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 const (
-	numClusters           = 5   // emergent "species" to look for
-	analysisRefreshFrames = 20  // recompute the clustering every N frames
-	analysisSampleCap     = 500 // cap genomes fed to k-means/PCA per refresh
+	numClusters           = 5
+	analysisRefreshFrames = 20
+	analysisSampleCap     = 500
 	kmeansIters           = 25
 )
 
-// clusterPalette colours each discovered species. Index by cluster number.
 var clusterPalette = []color.RGBA{
-	{0xe6, 0x55, 0x55, 0xff}, // red
-	{0x55, 0xc0, 0xe6, 0xff}, // cyan
-	{0x9b, 0xe0, 0x55, 0xff}, // green
-	{0xe0, 0xa0, 0x40, 0xff}, // orange
-	{0xc0, 0x7c, 0xe6, 0xff}, // purple
+	{0xe6, 0x55, 0x55, 0xff},
+	{0x55, 0xc0, 0xe6, 0xff},
+	{0x9b, 0xe0, 0x55, 0xff},
+	{0xe0, 0xa0, 0x40, 0xff},
+	{0xc0, 0x7c, 0xe6, 0xff},
 }
 
 func clusterColor(i int) color.RGBA { return clusterPalette[i%len(clusterPalette)] }
 
-// analysis holds the result of one clustering/projection pass over the population.
 type analysis struct {
 	k                      int
 	sizes                  []int
 	clusterOf              map[*sim.Agent]int
 	coords                 map[*sim.Agent][2]float64
-	centroids              [][]float64 // kept to warm-start the next pass (stable labels)
+	centroids              [][]float64
 	pcaOK                  bool
 	minX, maxX, minY, maxY float64
 	sampled, total         int
 }
 
-// computeAnalysis clusters the living population in brain-genome space and projects
-// it to 2D. It is read-only over the simulation and uses its own RNG, so it never
-// affects the run's determinism. prev is the previous result (or nil); its
-// centroids warm-start k-means so cluster labels — and therefore the colours —
-// stay attached to the same groups across refreshes instead of flashing.
 func computeAnalysis(w *sim.World, prev *analysis) *analysis {
 	// Collect living agents, sampling with a stride if the population is large.
 	var agents []*sim.Agent
@@ -106,8 +102,6 @@ func computeAnalysis(w *sim.World, prev *analysis) *analysis {
 	return res
 }
 
-// drawAnalysisPanel renders a bottom-right panel with the cluster legend and a 2D
-// PCA scatter of brain-genome space, coloured by species.
 func (g *Game) drawAnalysisPanel(screen *ebiten.Image) {
 	a := g.analysis
 	const pw, ph = 232.0, 196.0
@@ -125,7 +119,7 @@ func (g *Game) drawAnalysisPanel(screen *ebiten.Image) {
 	// Legend: a coloured swatch and size per cluster.
 	ly := py + 36
 	for c := 0; c < a.k; c++ {
-		vector.DrawFilledRect(screen, float32(px+8), float32(ly), 8, 8, clusterColor(c), false)
+		vector.FillRect(screen, float32(px+8), float32(ly), 8, 8, clusterColor(c), false)
 		drawText(screen, fmt.Sprintf("sp%d  %d", c, a.sizes[c]), px+22, ly-3, colText)
 		ly += 14
 	}
@@ -148,12 +142,10 @@ func (g *Game) drawAnalysisPanel(screen *ebiten.Image) {
 	for agent, xy := range a.coords {
 		fx := plotX + (xy[0]-a.minX)/spanX*plotW
 		fy := plotY + plotH - (xy[1]-a.minY)/spanY*plotH
-		vector.DrawFilledCircle(screen, float32(fx), float32(fy), 1.5, clusterColor(a.clusterOf[agent]), false)
+		vector.FillCircle(screen, float32(fx), float32(fy), 1.5, clusterColor(a.clusterOf[agent]), false)
 	}
 }
 
-// agentBodyColor returns the colour to draw an agent's body in. The lineage and
-// species views recolour agents; otherwise nil signals the default kind colour.
 func (g *Game) agentBodyColor(a *sim.Agent) color.Color {
 	if g.lineageOn && g.lineageView != nil {
 		if ci, ok := g.lineageView.colorOf[a.LineageID]; ok {

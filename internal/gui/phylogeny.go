@@ -1,39 +1,33 @@
-package render
+//go:build ebiten
+
+package gui
 
 import (
 	"fmt"
 	"sort"
 
-	"github.com/danielriddell21/vivarium/internal/sim"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
-const maxPhyloLeaves = 60 // living agents sampled as leaves of the drawn tree
+const maxPhyloLeaves = 60
 
 type phyloPos struct {
-	x, y    float64 // normalised 0..1 (x = time, y = layout order)
+	x, y    float64
 	lineage int
 }
 
-// phyloView is a laid-out coalescent tree ready to draw.
 type phyloView struct {
 	pos     map[int]phyloPos
-	edges   [][2]int // parentID, childID (both present in pos)
+	edges   [][2]int
 	leafIDs []int
 	leaves  int
 	living  int
 }
 
-// computePhylogeny builds the genealogy of a sample of the living population: it
-// traces each sampled agent back through retained ancestors, then lays the induced
-// tree out with time on the x-axis. Read-only; no RNG.
-func computePhylogeny(w *sim.World) *phyloView {
-	gen := w.Genealogy()
-
-	// Living agents that have a genealogy node, sampled with a stride.
-	var leaves []int
-	living := 0
+func samplePhyloLeaves(w *sim.World, gen map[int]*sim.GenealogyNode) (leaves []int, living int) {
 	for _, a := range w.Agents {
 		if a.Alive {
 			if _, ok := gen[a.ID]; ok {
@@ -51,8 +45,10 @@ func computePhylogeny(w *sim.World) *phyloView {
 		}
 		leaves = s
 	}
+	return leaves, living
+}
 
-	// Induced ancestor set (union of root-ward paths from the sampled leaves).
+func inducedAncestors(gen map[int]*sim.GenealogyNode, leaves []int) map[int]bool {
 	induced := make(map[int]bool)
 	for _, leaf := range leaves {
 		for id := leaf; id != 0; {
@@ -64,10 +60,12 @@ func computePhylogeny(w *sim.World) *phyloView {
 			id = n.ParentID
 		}
 	}
+	return induced
+}
 
-	children := make(map[int][]int)
-	var roots []int
-	minTick, maxTick := 1<<62, -(1 << 62)
+func buildInducedTree(gen map[int]*sim.GenealogyNode, induced map[int]bool) (children map[int][]int, roots []int, minTick, maxTick int) {
+	children = make(map[int][]int)
+	minTick, maxTick = 1<<62, -(1 << 62)
 	for id := range induced {
 		n := gen[id]
 		if n.BirthTick < minTick {
@@ -86,6 +84,14 @@ func computePhylogeny(w *sim.World) *phyloView {
 		sort.Ints(ch)
 	}
 	sort.Ints(roots)
+	return children, roots, minTick, maxTick
+}
+
+func computePhylogeny(w *sim.World) *phyloView {
+	gen := w.Genealogy()
+	leaves, living := samplePhyloLeaves(w, gen)
+	induced := inducedAncestors(gen, leaves)
+	children, roots, minTick, maxTick := buildInducedTree(gen, induced)
 
 	pv := &phyloView{pos: make(map[int]phyloPos, len(induced)), living: living}
 	span := float64(maxTick - minTick)
@@ -131,8 +137,6 @@ func computePhylogeny(w *sim.World) *phyloView {
 	return pv
 }
 
-// drawPhylogenyPanel draws the coalescent tree as a rectangular dendrogram with
-// time increasing to the right, branches coloured by lineage.
 func (g *Game) drawPhylogenyPanel(screen *ebiten.Image) {
 	pv := g.phylo
 	px := g.World.W * 0.10
@@ -166,7 +170,7 @@ func (g *Game) drawPhylogenyPanel(screen *ebiten.Image) {
 	for _, id := range pv.leafIDs {
 		p := pv.pos[id]
 		clr := lineagePalette[p.lineage%len(lineagePalette)]
-		vector.DrawFilledCircle(screen, float32(plotX+p.x*plotW), float32(plotY+p.y*plotH), 2, clr, false)
+		vector.FillCircle(screen, float32(plotX+p.x*plotW), float32(plotY+p.y*plotH), 2, clr, false)
 	}
 
 	drawText(screen, fmt.Sprintf("%d leaves shown of %d living; %d nodes", pv.leaves, pv.living, len(pv.pos)), px+8, py+ph-16, colText)

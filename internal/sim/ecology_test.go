@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// TestSeasonsModulateRegrowth checks the seasonal cycle scales plant regrowth:
-// a plant regrows faster at the summer peak than at the winter trough.
 func TestSeasonsModulateRegrowth(t *testing.T) {
 	cfg := testConfig()
 	cfg.Params.SeasonLength = 1000
@@ -32,8 +30,6 @@ func TestSeasonsModulateRegrowth(t *testing.T) {
 	}
 }
 
-// TestObstacleBlocksMovement checks an agent cannot walk into a terrain rock but
-// can still move when its path is clear.
 func TestObstacleBlocksMovement(t *testing.T) {
 	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
 	w.obstacles = []Obstacle{{Pos: geom2(130, 100), Radius: 20}}
@@ -46,9 +42,7 @@ func TestObstacleBlocksMovement(t *testing.T) {
 
 	start := a.Pos
 	a.act(w, []float64{0, 1, 0, 0}) // full speed ahead
-	if a.Pos != start {
-		// It may take a couple of ticks to reach; step until it would enter.
-	}
+	// It may take a couple of ticks to reach the rock; step until it would enter.
 	for i := 0; i < 20; i++ {
 		a.act(w, []float64{0, 1, 0, 0})
 	}
@@ -60,8 +54,6 @@ func TestObstacleBlocksMovement(t *testing.T) {
 	}
 }
 
-// TestDietAffectsEnergyGain checks a specialist herbivore gains more from its
-// preferred food type than from the opposite type.
 func TestDietAffectsEnergyGain(t *testing.T) {
 	gain := func(diet float64, foodType int) float64 {
 		w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
@@ -85,8 +77,6 @@ func TestDietAffectsEnergyGain(t *testing.T) {
 	}
 }
 
-// TestVisionOcclusion checks terrain between an agent and a target hides it, while
-// the same target is visible once the obstacle is removed.
 func TestVisionOcclusion(t *testing.T) {
 	build := func(withRock bool) []float64 {
 		w := &World{W: 1000, H: 1000, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
@@ -110,8 +100,6 @@ func TestVisionOcclusion(t *testing.T) {
 	}
 }
 
-// TestDayNightShrinksVision checks an agent perceives a distant neighbour by day
-// but not at night, when effective vision contracts.
 func TestDayNightShrinksVision(t *testing.T) {
 	build := func(tick int) []float64 {
 		w := &World{W: 1000, H: 1000, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
@@ -140,8 +128,6 @@ func TestDayNightShrinksVision(t *testing.T) {
 	}
 }
 
-// TestFindMate checks mate selection: a nearby mature same-kind agent qualifies,
-// while a different species, an immature agent, or one out of range does not.
 func TestFindMate(t *testing.T) {
 	w := &World{W: 500, H: 500, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
 	w.params.MateRadius = 50

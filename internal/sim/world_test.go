@@ -18,9 +18,6 @@ func testConfig() Config {
 	}
 }
 
-// TestDeterministicSeed verifies that two worlds built and stepped from the same
-// seed produce identical population trajectories — the core reproducibility
-// guarantee the -seed flag promises.
 func TestDeterministicSeed(t *testing.T) {
 	run := func(seed int64) []Counts {
 		w := NewWorld(rand.New(rand.NewSource(seed)), testConfig())
@@ -64,8 +61,6 @@ func TestStepRunsWithoutPanic(t *testing.T) {
 	}
 }
 
-// TestReproductionIncreasesGeneration checks that a well-fed agent reproduces and
-// that the offspring carries an incremented generation.
 func TestReproductionIncreasesGeneration(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(3)), testConfig())
 	parent := w.Agents[0]
@@ -84,8 +79,6 @@ func TestReproductionIncreasesGeneration(t *testing.T) {
 	}
 }
 
-// TestReproduceSetsCooldown verifies the gestation/maturation timers that stop a
-// single large meal from becoming an instant litter.
 func TestReproduceSetsCooldown(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(3)), testConfig())
 	parent := w.Agents[0]
@@ -100,8 +93,6 @@ func TestReproduceSetsCooldown(t *testing.T) {
 	}
 }
 
-// TestRescueRepopulates verifies the rescue effect: after a tier is wiped out,
-// immigration brings it back rather than leaving it extinct forever.
 func TestRescueRepopulates(t *testing.T) {
 	cfg := testConfig()
 	cfg.Rescue = true
@@ -132,8 +123,6 @@ func TestRescueRepopulates(t *testing.T) {
 	}
 }
 
-// TestRescueDisabledStaysExtinct confirms that with rescue off a wiped tier does
-// not magically return.
 func TestRescueDisabledStaysExtinct(t *testing.T) {
 	cfg := testConfig()
 	cfg.Rescue = false
@@ -151,8 +140,6 @@ func TestRescueDisabledStaysExtinct(t *testing.T) {
 	}
 }
 
-// TestVisionSectors checks that targets and threats are binned into the correct
-// directional sector relative to the agent's heading.
 func TestVisionSectors(t *testing.T) {
 	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
 	herb := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
@@ -185,8 +172,6 @@ func TestVisionSectors(t *testing.T) {
 	}
 }
 
-// TestVoiceChannel checks an agent hears a same-kind neighbour's broadcast signal
-// in the correct sector, and does not hear other species.
 func TestVoiceChannel(t *testing.T) {
 	w := &World{W: 400, H: 300, rng: rand.New(rand.NewSource(1)), params: DefaultParams()}
 	herb := w.newAgent(Herbivore, geom2(100, 100), nil, Traits{}, 0)
@@ -208,8 +193,6 @@ func TestVoiceChannel(t *testing.T) {
 	}
 }
 
-// TestLearningDriftsPlasticBrains verifies that an agent with non-zero Plasticity
-// adapts its brain over its life, while a Plasticity-0 agent does not.
 func TestLearningDriftsPlasticBrains(t *testing.T) {
 	w := &World{W: 200, H: 200, rng: rand.New(rand.NewSource(2)), params: DefaultParams()}
 	w.reindex()
@@ -235,8 +218,6 @@ func TestLearningDriftsPlasticBrains(t *testing.T) {
 	}
 }
 
-// TestLineageInheritance checks founders get distinct lineages and offspring
-// inherit their parent's lineage and record their parent.
 func TestLineageInheritance(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(1)), testConfig())
 	a, b := w.Agents[0], w.Agents[1]
@@ -254,7 +235,6 @@ func TestLineageInheritance(t *testing.T) {
 	}
 }
 
-// TestLineageHistoryRecorded checks that lineage counts are sampled over time.
 func TestLineageHistoryRecorded(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(1)), testConfig())
 	for i := 0; i < 60; i++ {
@@ -273,9 +253,6 @@ func TestLineageHistoryRecorded(t *testing.T) {
 	}
 }
 
-// TestGenealogyRecordsAndPrunes checks that births are recorded with parent links
-// and that pruning keeps the ancestry of living agents while dropping extinct
-// branches.
 func TestGenealogyRecordsAndPrunes(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(1)), testConfig())
 	for i := 0; i < 80; i++ {

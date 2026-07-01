@@ -1,0 +1,99 @@
+version: 2
+
+project_name: vivarium
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  # Cross-platform CLI: CGO-free build of the single vivarium binary for Linux
+  # and Windows. The Ebiten GUI is behind the `ebiten` tag (cgo), so these builds
+  # expose the `headless` subcommand; the bare command explains how to get the GUI.
+  - id: cli
+    main: ./cmd/vivarium
+    binary: vivarium
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+
+  # GUI build: the Ebiten window compiled in via the `ebiten` tag. Needs cgo
+  # (Metal / Cocoa), so it is macOS-only and built natively on the macOS runner.
+  # It also carries the `headless` subcommand for batch runs.
+  - id: gui
+    main: ./cmd/vivarium
+    binary: vivarium
+    env:
+      - CGO_ENABLED=1
+    flags:
+      - -tags=ebiten
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+
+archives:
+  - id: cli
+    ids: [cli]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+  - id: gui
+    ids: [gui]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  name_template: "v{{ .Version }}"
+
+# Homebrew formula: the cross-platform CGO-free vivarium binary (Linux/Windows).
+# The bare command needs the GUI build; `vivarium headless` runs batch sims.
+brews:
+  - name: vivarium
+    ids: [cli]
+    repository:
+      owner: danielriddell21
+      name: homebrew-tap
+      branch: trunk
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/danielriddell21/vivarium
+    description: "Evolving 2D ecosystem simulation; use 'vivarium headless' for batch runs"
+    license: MIT
+    commit_msg_template: "Brew formula update for vivarium {{ .Tag }}"
+    install: |
+      bin.install "vivarium"
+    caveats: "The native GUI is macOS-only: on macOS install the cask with 'brew install --cask vivarium'. Elsewhere use 'vivarium headless' for batch runs."
+
+# Homebrew cask: the macOS-only native Ebiten window. The same binary also
+# provides the `vivarium headless` subcommand.
+homebrew_casks:
+  - name: vivarium
+    ids: [gui]
+    repository:
+      owner: danielriddell21
+      name: homebrew-tap
+      branch: trunk
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/danielriddell21/vivarium
+    description: "Watch an evolving 2D ecosystem in a native macOS window"
+    license: MIT
+    caveats: "The vivarium window is macOS-only; the same binary also runs 'vivarium headless' for batch simulations."

@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// TestSnapshotRoundTrip evolves a world, saves it to disk, loads it back, and
-// checks the population and genomes survive the trip and the loaded world runs.
 func TestSnapshotRoundTrip(t *testing.T) {
 	w := NewWorld(rand.New(rand.NewSource(7)), testConfig())
 	for i := 0; i < 200; i++ {

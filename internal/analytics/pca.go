@@ -5,14 +5,6 @@ import (
 	"math/rand"
 )
 
-// Project2D projects high-dimensional points onto their top two principal
-// components, returning a 2D coordinate per point. It mean-centres the data and
-// finds the leading eigenvectors of the covariance by power iteration with
-// deflation — no matrix library. ok is false when there are too few points or no
-// variance to project.
-//
-// The rng seeds the power-iteration starting vectors; results are deterministic
-// for a given rng and do not touch any other RNG.
 func Project2D(pts [][]float64, rng *rand.Rand) (coords [][2]float64, ok bool) {
 	n := len(pts)
 	if n < 2 {
@@ -55,9 +47,6 @@ func Project2D(pts [][]float64, rng *rand.Rand) (coords [][2]float64, ok bool) {
 	return coords, true
 }
 
-// powerIteration returns the leading eigenvector of the covariance of the centred
-// rows. If prev is non-nil, each candidate is orthogonalised against it (deflation)
-// so the second principal component is found. Returns nil if there is no variance.
 func powerIteration(centred [][]float64, prev []float64, rng *rand.Rand) []float64 {
 	dim := len(centred[0])
 	v := make([]float64, dim)
