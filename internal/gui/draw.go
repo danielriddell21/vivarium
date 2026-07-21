@@ -11,7 +11,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/geom"
+
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 

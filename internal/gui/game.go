@@ -8,7 +8,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/geom"
+
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
