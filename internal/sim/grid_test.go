@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/geom"
 )
 
 func bruteNearestAgent(w *World, pos geom.Vec2, k Kind, radius float64, exclude int) *Agent {

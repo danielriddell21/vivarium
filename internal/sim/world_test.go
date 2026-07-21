@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/geom"
 )
 
 func geom2(x, y float64) geom.Vec2 { return geom.Vec2{X: x, Y: y} }

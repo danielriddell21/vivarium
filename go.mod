@@ -3,9 +3,11 @@ module github.com/danielriddell21/vivarium
 go 1.26.3
 
 require (
+	github.com/danielriddell21/crucible v0.1.0
 	github.com/hajimehoshi/ebiten/v2 v2.9.9
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/image v0.43.0
+	github.com/spf13/pflag v1.0.9
+	golang.org/x/image v0.44.0
 )
 
 require (
@@ -16,8 +18,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
-	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 )

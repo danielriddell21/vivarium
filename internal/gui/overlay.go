@@ -20,7 +20,7 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	}
 	drawPanel(screen, 6, 6, 320, 120)
 	drawText(screen, fmt.Sprintf("%s   speed x%d   tick %d", state, g.Speed, g.World.Tick), 12, 10, colText)
-	drawText(screen, fmt.Sprintf("fps %.0f   tps %.0f   zoom x%.1f", ebiten.ActualFPS(), ebiten.ActualTPS(), g.cam.zoom), 12, 26, colText)
+	drawText(screen, fmt.Sprintf("fps %.0f   tps %.0f   zoom x%.1f", ebiten.ActualFPS(), ebiten.ActualTPS(), g.cam.Zoom), 12, 26, colText)
 	drawText(screen, fmt.Sprintf("plants %d", c.Plants), 12, 42, colFood)
 	drawText(screen, fmt.Sprintf("herbivores %d", c.Herbivores), 100, 42, colHerbivore)
 	drawText(screen, fmt.Sprintf("carnivores %d", c.Carnivores), 12, 58, colCarnivore)

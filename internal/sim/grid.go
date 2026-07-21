@@ -3,7 +3,7 @@ package sim
 import (
 	"math"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/geom"
 )
 
 const gridCellSize = 80.0

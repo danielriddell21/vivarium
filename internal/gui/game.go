@@ -3,12 +3,12 @@
 package gui
 
 import (
-	"cmp"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/camera"
+	"github.com/danielriddell21/crucible/geom"
+
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
@@ -37,7 +37,7 @@ type Game struct {
 
 	hideSignals bool
 
-	cam      camera
+	cam      camera.Camera
 	worldImg *ebiten.Image
 
 	SnapshotPath string
@@ -46,7 +46,7 @@ type Game struct {
 }
 
 func NewGame(w *sim.World) *Game {
-	return &Game{World: w, Speed: 1, cam: newCamera()}
+	return &Game{World: w, Speed: 1, cam: camera.New()}
 }
 
 func (g *Game) Update() error {
@@ -76,10 +76,10 @@ func (g *Game) handleSpeedKeys() {
 	}
 	// '+' / '=' speed up, '-' slow down. Both keypad and main row are accepted.
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) || inpututil.IsKeyJustPressed(ebiten.KeyKPAdd) {
-		g.Speed = clamp(g.Speed*2, minSpeed, maxSpeed)
+		g.Speed = geom.Clamp(g.Speed*2, minSpeed, maxSpeed)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) || inpututil.IsKeyJustPressed(ebiten.KeyKPSubtract) {
-		g.Speed = clamp(g.Speed/2, minSpeed, maxSpeed)
+		g.Speed = geom.Clamp(g.Speed/2, minSpeed, maxSpeed)
 	}
 }
 
@@ -122,26 +122,26 @@ func (g *Game) handleCamera() {
 		if wy < 0 {
 			factor = 1 / 1.1
 		}
-		g.cam.zoomAt(factor, float64(mx), float64(my), g.World.W, g.World.H)
+		g.cam.ZoomAt(factor, float64(mx), float64(my), g.World.W, g.World.H)
 	}
 	const panStep = 12
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		g.cam.pan(-panStep, 0, g.World.W, g.World.H)
+		g.cam.Pan(-panStep, 0, g.World.W, g.World.H)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		g.cam.pan(panStep, 0, g.World.W, g.World.H)
+		g.cam.Pan(panStep, 0, g.World.W, g.World.H)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		g.cam.pan(0, -panStep, g.World.W, g.World.H)
+		g.cam.Pan(0, -panStep, g.World.W, g.World.H)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		g.cam.pan(0, panStep, g.World.W, g.World.H)
+		g.cam.Pan(0, panStep, g.World.W, g.World.H)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key0) {
-		g.cam = newCamera()
+		g.cam = camera.New()
 	}
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		wx, wy := g.cam.screenToWorld(float64(mx), float64(my))
+		wx, wy := g.cam.ScreenToWorld(float64(mx), float64(my))
 		g.Selected = g.World.NearestAgent(geom.Vec2{X: wx, Y: wy})
 	}
 }
@@ -172,8 +172,4 @@ func (g *Game) refreshOverlays() {
 
 func (g *Game) Layout(_, _ int) (int, int) {
 	return int(g.World.W), int(g.World.H)
-}
-
-func clamp[T cmp.Ordered](v, lo, hi T) T {
-	return max(lo, min(hi, v))
 }

@@ -1,6 +1,6 @@
 package sim
 
-import "github.com/danielriddell21/vivarium/internal/geom"
+import "github.com/danielriddell21/crucible/geom"
 
 const NumFoodTypes = 2
 

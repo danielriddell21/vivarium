@@ -4,7 +4,8 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/geom"
+
 	"github.com/danielriddell21/vivarium/internal/neural"
 )
 

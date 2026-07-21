@@ -11,7 +11,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
 
-	"github.com/danielriddell21/vivarium/internal/geom"
+	"github.com/danielriddell21/crucible/geom"
+
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
@@ -57,7 +58,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Blit the world through the camera, then draw overlays in screen space.
 	screen.Fill(colBackground)
-	op := &ebiten.DrawImageOptions{GeoM: g.cam.geoM()}
+	op := &ebiten.DrawImageOptions{GeoM: g.cam.GeoM()}
 	screen.DrawImage(world, op)
 
 	g.drawGraph(screen)
