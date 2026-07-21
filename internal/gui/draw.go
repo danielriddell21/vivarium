@@ -58,7 +58,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Blit the world through the camera, then draw overlays in screen space.
 	screen.Fill(colBackground)
-	op := &ebiten.DrawImageOptions{GeoM: g.cam.geoM()}
+	op := &ebiten.DrawImageOptions{GeoM: g.cam.GeoM()}
 	screen.DrawImage(world, op)
 
 	g.drawGraph(screen)
