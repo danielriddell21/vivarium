@@ -72,9 +72,9 @@ func Run(o Config) error {
 	}
 	game := NewGame(world)
 	game.SnapshotPath = o.SnapPath
-	if o.RecordPath != "" {
-		game.rec = record.NewRecorder(o.RecordFPS, o.RecordScale, o.RecordFrames)
-		game.recPath = o.RecordPath
+	if o.Rec.Recording() {
+		game.rec = record.New(o.Rec)
+		game.recPath = o.Rec.Path
 		game.Speed = 2 // a steady pace for a lively recording
 	}
 
