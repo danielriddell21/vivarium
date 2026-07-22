@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/danielriddell21/crucible/geom"
+	"github.com/danielriddell21/crucible/ring"
 
 	"github.com/danielriddell21/vivarium/internal/neural"
 )
@@ -65,8 +66,8 @@ type World struct {
 	rescue         bool
 	minHerb        int
 	minCarn        int
-	history        []Counts
-	lineageHistory []map[int]int
+	history        *ring.Ring[Counts]
+	lineageHistory *ring.Ring[map[int]int]
 	genealogy      map[int]*GenealogyNode
 
 	grid      *spatialGrid
@@ -131,12 +132,14 @@ func (w *World) reindex() {
 func NewWorld(rng *rand.Rand, cfg Config) *World {
 	w := &World{
 		W: cfg.Width, H: cfg.Height,
-		rng:          rng,
-		params:       cfg.Params,
-		targetPlants: cfg.TargetPlants,
-		rescue:       cfg.Rescue,
-		minHerb:      cfg.MinHerbivores,
-		minCarn:      cfg.MinCarnivores,
+		rng:            rng,
+		params:         cfg.Params,
+		targetPlants:   cfg.TargetPlants,
+		rescue:         cfg.Rescue,
+		minHerb:        cfg.MinHerbivores,
+		minCarn:        cfg.MinCarnivores,
+		history:        ring.New[Counts](maxHistory),
+		lineageHistory: ring.New[map[int]int](maxHistory),
 	}
 	for i := 0; i < cfg.Obstacles; i++ {
 		w.obstacles = append(w.obstacles, Obstacle{
@@ -429,10 +432,7 @@ func (w *World) CountKinds() Counts {
 }
 
 func (w *World) sampleHistory() {
-	w.history = append(w.history, w.CountKinds())
-	if len(w.history) > maxHistory {
-		w.history = w.history[len(w.history)-maxHistory:]
-	}
+	w.history.Push(w.CountKinds())
 
 	// Per-lineage living counts, for the lineage-over-time view.
 	counts := make(map[int]int)
@@ -441,15 +441,12 @@ func (w *World) sampleHistory() {
 			counts[a.LineageID]++
 		}
 	}
-	w.lineageHistory = append(w.lineageHistory, counts)
-	if len(w.lineageHistory) > maxHistory {
-		w.lineageHistory = w.lineageHistory[len(w.lineageHistory)-maxHistory:]
-	}
+	w.lineageHistory.Push(counts)
 }
 
-func (w *World) History() []Counts { return w.history }
+func (w *World) History() []Counts { return w.history.Slice() }
 
-func (w *World) LineageHistory() []map[int]int { return w.lineageHistory }
+func (w *World) LineageHistory() []map[int]int { return w.lineageHistory.Slice() }
 
 func (w *World) NearestAgent(pos geom.Vec2) *Agent {
 	var best *Agent

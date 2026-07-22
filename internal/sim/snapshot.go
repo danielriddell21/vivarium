@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/danielriddell21/crucible/geom"
+	"github.com/danielriddell21/crucible/ring"
 
 	"github.com/danielriddell21/vivarium/internal/neural"
 )
@@ -76,15 +77,17 @@ func (w *World) config() Config {
 func NewWorldFromSnapshot(rng *rand.Rand, s Snapshot) *World {
 	w := &World{
 		W: s.Config.Width, H: s.Config.Height,
-		rng:          rng,
-		params:       s.Config.Params,
-		targetPlants: s.Config.TargetPlants,
-		rescue:       s.Config.Rescue,
-		minHerb:      s.Config.MinHerbivores,
-		minCarn:      s.Config.MinCarnivores,
-		Tick:         s.Tick,
-		obstacles:    slices.Clone(s.Obstacles),
-		Foods:        slices.Clone(s.Foods),
+		rng:            rng,
+		params:         s.Config.Params,
+		targetPlants:   s.Config.TargetPlants,
+		rescue:         s.Config.Rescue,
+		minHerb:        s.Config.MinHerbivores,
+		minCarn:        s.Config.MinCarnivores,
+		Tick:           s.Tick,
+		obstacles:      slices.Clone(s.Obstacles),
+		Foods:          slices.Clone(s.Foods),
+		history:        ring.New[Counts](maxHistory),
+		lineageHistory: ring.New[map[int]int](maxHistory),
 	}
 	discarded := 0
 	for _, as := range s.Agents {
