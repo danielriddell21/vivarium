@@ -3,11 +3,14 @@
 package gui
 
 import (
+	"fmt"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/danielriddell21/crucible/camera"
 	"github.com/danielriddell21/crucible/geom"
+	"github.com/danielriddell21/crucible/record"
 
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
@@ -43,6 +46,10 @@ type Game struct {
 	SnapshotPath string
 	saveMsg      string
 	saveMsgTTL   int
+
+	rec     *record.Recorder
+	recPath string
+	pix     []byte
 }
 
 func NewGame(w *sim.World) *Game {
@@ -50,6 +57,12 @@ func NewGame(w *sim.World) *Game {
 }
 
 func (g *Game) Update() error {
+	if g.rec != nil && g.rec.Done() {
+		if err := g.rec.Save(g.recPath); err != nil {
+			return fmt.Errorf("save recording: %w", err)
+		}
+		return ebiten.Termination
+	}
 	g.handleInput()
 	if !g.Paused {
 		for i := 0; i < g.Speed; i++ {

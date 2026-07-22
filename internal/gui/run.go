@@ -10,6 +10,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/danielriddell21/crucible/record"
+
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
@@ -70,6 +72,11 @@ func Run(o Config) error {
 	}
 	game := NewGame(world)
 	game.SnapshotPath = o.SnapPath
+	if o.RecordPath != "" {
+		game.rec = record.NewRecorder(o.RecordFPS, o.RecordScale, o.RecordFrames)
+		game.recPath = o.RecordPath
+		game.Speed = 2 // a steady pace for a lively recording
+	}
 
 	ebiten.SetWindowSize(int(cfg.Width), int(cfg.Height))
 	ebiten.SetWindowTitle("Vivarium — evolving ecosystem")

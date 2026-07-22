@@ -42,6 +42,10 @@ func Execute(version string) error {
 	f.BoolVar(&o.PrintConfig, "print-config", false, "print the default config as JSON and exit")
 	f.StringVar(&o.LoadPath, "load", "", "load a saved population snapshot instead of a fresh world")
 	f.StringVar(&o.SnapPath, "snapshot", "vivarium-snapshot.json", "file the 's' key saves the population to")
+	f.StringVar(&o.RecordPath, "record", "", "record the run to this GIF path, then exit")
+	f.IntVar(&o.RecordFPS, "record-fps", 30, "recording frames per second")
+	f.IntVar(&o.RecordScale, "record-scale", 2, "downscale factor for the recording")
+	f.IntVar(&o.RecordFrames, "record-frames", 600, "frames to capture before exiting")
 
 	root.AddCommand(headlessCmd())
 	root.AddCommand(completionCmd())
