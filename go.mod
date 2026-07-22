@@ -3,7 +3,7 @@ module github.com/danielriddell21/vivarium
 go 1.26.3
 
 require (
-	github.com/danielriddell21/crucible v0.1.0
+	github.com/danielriddell21/crucible v0.3.1-0.20260722104531-05ec351fd797
 	github.com/hajimehoshi/ebiten/v2 v2.9.9
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
