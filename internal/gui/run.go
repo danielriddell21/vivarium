@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/danielriddell21/crucible/record"
+	"github.com/danielriddell21/crucible/window"
 
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
@@ -78,9 +79,10 @@ func Run(o Config) error {
 		game.Speed = 2 // a steady pace for a lively recording
 	}
 
-	ebiten.SetWindowSize(int(cfg.Width), int(cfg.Height))
-	ebiten.SetWindowTitle("Vivarium — evolving ecosystem")
-	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	window.Configure(window.Options{
+		Title: "Vivarium — evolving ecosystem", Width: int(cfg.Width), Height: int(cfg.Height),
+		MinWidth: int(cfg.Width) / 2, MinHeight: int(cfg.Height) / 2,
+	})
 
 	if err := ebiten.RunGame(game); err != nil {
 		return fmt.Errorf("run game: %w", err)
