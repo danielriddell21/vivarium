@@ -1,6 +1,6 @@
 # vivarium
 
-> *An ecosystem where behaviour evolves.*
+> *vivarium* — a place where life is kept, and behaviour evolves.
 
 [![CI](https://github.com/danielriddell21/vivarium/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/vivarium/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/danielriddell21/vivarium/graph/badge.svg)](https://codecov.io/gh/danielriddell21/vivarium)
