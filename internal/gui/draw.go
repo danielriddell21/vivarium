@@ -3,7 +3,6 @@
 package gui
 
 import (
-	"image"
 	"image/color"
 	"math"
 
@@ -61,15 +60,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	if g.phyloOn {
 		g.drawPhylogenyPanel(screen)
-	}
-
-	if g.rec != nil && !g.rec.Done() {
-		b := screen.Bounds()
-		if g.pix == nil {
-			g.pix = make([]byte, 4*b.Dx()*b.Dy())
-		}
-		screen.ReadPixels(g.pix)
-		g.rec.Add(&image.RGBA{Pix: g.pix, Stride: 4 * b.Dx(), Rect: image.Rect(0, 0, b.Dx(), b.Dy())})
 	}
 }
 

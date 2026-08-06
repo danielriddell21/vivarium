@@ -42,8 +42,6 @@ func Execute(version string) error {
 	f.BoolVar(&o.PrintConfig, "print-config", false, "print the default config as JSON and exit")
 	f.StringVar(&o.LoadPath, "load", "", "load a saved population snapshot instead of a fresh world")
 	f.StringVar(&o.SnapPath, "snapshot", "vivarium-snapshot.json", "file the 's' key saves the population to")
-	o.Rec.Scale = 2 // the world is large; downscale the recording by default
-	o.Rec.AddFlags(f)
 
 	root.AddCommand(headlessCmd())
 	root.AddCommand(completionCmd())

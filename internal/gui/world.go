@@ -13,6 +13,13 @@ import (
 // any explicitly-set flags — and returns the world to run. A printed config
 // returns a nil world and no error, meaning there is nothing to run.
 func buildWorld(o Config) (*sim.World, error) {
+	// Changed reports which flags the user set explicitly. A programmatic
+	// caller — the demo generator — sets none, so treat a missing hook as
+	// "nothing overridden" rather than dereferencing it.
+	changed := o.Changed
+	if changed == nil {
+		changed = func(string) bool { return false }
+	}
 	if o.PrintConfig {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -31,22 +38,22 @@ func buildWorld(o Config) (*sim.World, error) {
 		}
 		cfg = c
 	}
-	if o.Changed("width") {
+	if changed("width") {
 		cfg.Width = o.Width
 	}
-	if o.Changed("height") {
+	if changed("height") {
 		cfg.Height = o.Height
 	}
-	if o.Changed("plants") {
+	if changed("plants") {
 		cfg.Plants = o.Plants
 	}
-	if o.Changed("herbivores") {
+	if changed("herbivores") {
 		cfg.Herbivores = o.Herbivores
 	}
-	if o.Changed("carnivores") {
+	if changed("carnivores") {
 		cfg.Carnivores = o.Carnivores
 	}
-	if o.Changed("rescue") {
+	if changed("rescue") {
 		cfg.Rescue = o.Rescue
 	}
 	if cfg.TargetPlants < cfg.Plants {

@@ -7,7 +7,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/danielriddell21/crucible/record"
 	"github.com/danielriddell21/crucible/window"
 )
 
@@ -20,11 +19,6 @@ func Run(o Config) error {
 	}
 	game := NewGame(world)
 	game.SnapshotPath = o.SnapPath
-	if o.Rec.Recording() {
-		game.rec = record.New(o.Rec)
-		game.recPath = o.Rec.Path
-		game.Speed = 2 // a steady pace for a lively recording
-	}
 
 	window.Configure(window.Options{
 		Title: "Vivarium — evolving ecosystem", Width: int(world.W), Height: int(world.H),
