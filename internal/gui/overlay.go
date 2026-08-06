@@ -32,12 +32,6 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	}
 }
 
-const (
-	graphW      = 280.0
-	graphH      = 90.0
-	graphMargin = 8.0
-)
-
 func (g *Game) drawGraph(screen *ebiten.Image) {
 	hist := g.World.History()
 	gx := graphMargin
@@ -195,11 +189,4 @@ func drawVector(screen *ebiten.Image, vals []float64, labels []string, x, y floa
 		y += 13
 	}
 	return y
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
