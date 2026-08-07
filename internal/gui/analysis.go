@@ -1,15 +1,9 @@
-//go:build ebiten
-
 package gui
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 	"math/rand"
-
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/danielriddell21/vivarium/internal/analytics"
 	"github.com/danielriddell21/vivarium/internal/sim"
@@ -102,62 +96,16 @@ func computeAnalysis(w *sim.World, prev *analysis) *analysis {
 	return res
 }
 
-func (g *Game) drawAnalysisPanel(screen *ebiten.Image) {
-	a := g.analysis
-	const pw, ph = 232.0, 196.0
-	px := g.World.W - pw - 6
-	py := g.World.H - ph - 6
-	drawPanel(screen, px, py, pw, ph)
-	drawText(screen, "species (genome k-means + PCA)", px+6, py+4, colText)
-
-	if a == nil || a.total < 2 {
-		drawText(screen, "population too small", px+6, py+22, colText)
-		return
+// clusterBodyColor recolours agents by the genome cluster they fell into, so
+// the world matches the species panel's legend.
+func clusterBodyColor(a *analysis) func(*sim.Agent) (color.RGBA, bool) {
+	if a == nil {
+		return nil
 	}
-	drawText(screen, fmt.Sprintf("K=%d   n=%d/%d", a.k, a.sampled, a.total), px+6, py+20, colText)
-
-	// Legend: a coloured swatch and size per cluster.
-	ly := py + 36
-	for c := 0; c < a.k; c++ {
-		vector.FillRect(screen, float32(px+8), float32(ly), 8, 8, clusterColor(c), false)
-		drawText(screen, fmt.Sprintf("sp%d  %d", c, a.sizes[c]), px+22, ly-3, colText)
-		ly += 14
-	}
-
-	// PCA scatter to the right of the legend.
-	plotX, plotY := px+110, py+34
-	plotW, plotH := pw-116, ph-42
-	vector.StrokeRect(screen, float32(plotX), float32(plotY), float32(plotW), float32(plotH), 1, colPanel, false)
-	if !a.pcaOK {
-		return
-	}
-	spanX := a.maxX - a.minX
-	spanY := a.maxY - a.minY
-	if spanX == 0 {
-		spanX = 1
-	}
-	if spanY == 0 {
-		spanY = 1
-	}
-	for agent, xy := range a.coords {
-		fx := plotX + (xy[0]-a.minX)/spanX*plotW
-		fy := plotY + plotH - (xy[1]-a.minY)/spanY*plotH
-		vector.FillCircle(screen, float32(fx), float32(fy), 1.5, clusterColor(a.clusterOf[agent]), false)
-	}
-}
-
-func (g *Game) agentBodyColor(a *sim.Agent) color.Color {
-	if g.lineageOn && g.lineageView != nil {
-		if ci, ok := g.lineageView.colorOf[a.LineageID]; ok {
-			return lineagePalette[ci]
+	return func(ag *sim.Agent) (color.RGBA, bool) {
+		if c, ok := a.clusterOf[ag]; ok {
+			return clusterColor(c), true
 		}
-		return colOther
+		return color.RGBA{R: 0x70, G: 0x70, B: 0x70, A: 0xff}, true // sampled-out / newly born
 	}
-	if g.analysisOn && g.analysis != nil {
-		if c, ok := g.analysis.clusterOf[a]; ok {
-			return clusterColor(c)
-		}
-		return color.RGBA{0x70, 0x70, 0x70, 0xff} // sampled-out / newly born
-	}
-	return nil
 }

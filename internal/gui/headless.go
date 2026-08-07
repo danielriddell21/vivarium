@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -8,8 +9,6 @@ import (
 	"github.com/danielriddell21/crucible/canvas"
 	"github.com/danielriddell21/crucible/demo"
 	"github.com/danielriddell21/crucible/record"
-
-	"github.com/danielriddell21/vivarium/internal/sim"
 )
 
 // recordSpeed advances the world this many ticks per captured frame, the same
@@ -21,7 +20,14 @@ const recordSpeed = 2
 // anywhere.
 //
 // The file extension picks the format: .gif or .mp4.
-func Render(o Config, w *sim.World) error {
+func Render(o Config) error {
+	w, err := buildWorld(o)
+	if err != nil {
+		return err
+	}
+	if w == nil {
+		return errors.New("nothing to render: the configuration was only printed")
+	}
 	c := canvas.New(int(w.W), int(w.H))
 	// The scene is broad flat colour over a dark background, so a palette built
 	// from its own colours plus delta frames keeps the file small.

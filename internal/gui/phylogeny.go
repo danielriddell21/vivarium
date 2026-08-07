@@ -1,13 +1,7 @@
-//go:build ebiten
-
 package gui
 
 import (
-	"fmt"
 	"sort"
-
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
@@ -135,43 +129,4 @@ func computePhylogeny(w *sim.World) *phyloView {
 		}
 	}
 	return pv
-}
-
-func (g *Game) drawPhylogenyPanel(screen *ebiten.Image) {
-	pv := g.phylo
-	px := g.World.W * 0.10
-	py := 64.0
-	pw := g.World.W * 0.80
-	ph := g.World.H - 130
-
-	drawPanel(screen, px, py, pw, ph)
-	drawText(screen, "phylogeny - coalescent tree of living population (older left, now right)", px+8, py+4, colText)
-
-	if pv == nil || pv.leaves < 2 {
-		drawText(screen, "building genealogy...", px+8, py+22, colText)
-		return
-	}
-
-	plotX, plotY := px+12, py+26
-	plotW, plotH := pw-24, ph-40
-	for _, e := range pv.edges {
-		p := pv.pos[e[0]]
-		c := pv.pos[e[1]]
-		x1 := float32(plotX + p.x*plotW)
-		x2 := float32(plotX + c.x*plotW)
-		y1 := float32(plotY + p.y*plotH)
-		y2 := float32(plotY + c.y*plotH)
-		clr := lineagePalette[c.lineage%len(lineagePalette)]
-		// Rectangular elbow: vertical at the parent's time, then horizontal to child.
-		vector.StrokeLine(screen, x1, y1, x1, y2, 1, clr, false)
-		vector.StrokeLine(screen, x1, y2, x2, y2, 1, clr, false)
-	}
-	// Mark the living leaves.
-	for _, id := range pv.leafIDs {
-		p := pv.pos[id]
-		clr := lineagePalette[p.lineage%len(lineagePalette)]
-		vector.FillCircle(screen, float32(plotX+p.x*plotW), float32(plotY+p.y*plotH), 2, clr, false)
-	}
-
-	drawText(screen, fmt.Sprintf("%d leaves shown of %d living; %d nodes", pv.leaves, pv.living, len(pv.pos)), px+8, py+ph-16, colText)
 }
