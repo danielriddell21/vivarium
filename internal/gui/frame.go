@@ -6,6 +6,7 @@ import (
 
 	"github.com/danielriddell21/crucible/canvas"
 	"github.com/danielriddell21/crucible/geom"
+	"github.com/danielriddell21/crucible/keymap"
 
 	"github.com/danielriddell21/vivarium/internal/sim"
 )
@@ -149,13 +150,40 @@ func drawAgentTo(c *canvas.Canvas, a *sim.Agent, st SceneState) {
 	c.Line(ax, ay, nx, ny, 1, body)
 }
 
+// controls is vivarium's control scheme. crucible/keymap formats and wraps it
+// to the stats panel, so it reads "key: action" like every other app's and
+// stops running past the panel edge as it did when it was two fixed lines.
+var controls = []keymap.Binding{
+	{Key: "space", Action: "pause"},
+	{Key: "+/-", Action: "speed"},
+	{Key: "click", Action: "select"},
+	{Key: "g/l/p", Action: "views"},
+	{Key: "h", Action: "halos"},
+	{Key: "wheel", Action: "zoom"},
+	{Key: "arrows", Action: "pan"},
+	{Key: "0", Action: "reset"},
+	{Key: "s", Action: "save"},
+}
+
+// The stats panel's geometry. It sits at statsX,statsY and grows downward to
+// fit however many rows the controls wrap onto.
+const (
+	statsX, statsY = 6.0, 6.0
+	statsW         = 320.0
+	statsInset     = 6.0  // text inset from the panel edge
+	statsLineH     = 16   // one row of text
+	statsHintsY    = 90.0 // where the control rows start
+	statsFooter    = 4.0  // gap below the last row
+)
+
 func drawStats(c *canvas.Canvas, w *sim.World, st SceneState) {
 	counts := w.CountKinds()
 	state := "RUNNING"
 	if st.Paused {
 		state = "PAUSED"
 	}
-	panel(c, 6, 6, 320, 120)
+	rows := keymap.Rows(controls, statsW-2*statsInset, func(s string) int { return len(s) * canvas.GlyphWidth })
+	panel(c, statsX, statsY, statsW, statsHintsY-statsY+float64(len(rows))*statsLineH+statsFooter)
 	line := func(x, y int, s string, col color.RGBA) { c.Text(x, y+textAscent, s, col) }
 	line(12, 10, fmt.Sprintf("%s   speed x%d   tick %d", state, st.Speed, w.Tick), colText)
 	// A still has no frame rate to report, so it shows the zoom alone rather
@@ -169,8 +197,9 @@ func drawStats(c *canvas.Canvas, w *sim.World, st SceneState) {
 	line(100, 42, fmt.Sprintf("herbivores %d", counts.Herbivores), colHerbivore)
 	line(12, 58, fmt.Sprintf("carnivores %d", counts.Carnivores), colCarnivore)
 	line(12, 74, fmt.Sprintf("season x%.2f   light x%.2f", w.SeasonFactor(), w.LightFactor()), colText)
-	line(12, 90, "space pause  +/- speed  click select  g/l/p views  h halos", colText)
-	line(12, 106, "wheel zoom  arrows pan  0 reset  s save", colText)
+	for i, r := range rows {
+		line(int(statsX+statsInset), int(statsHintsY)+i*statsLineH, r, colText)
+	}
 }
 
 func drawPopulationGraph(c *canvas.Canvas, w *sim.World) {
