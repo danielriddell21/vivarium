@@ -20,6 +20,9 @@ import (
 
 const outDir = "docs/demos"
 
+// seed fixes the world the stills are taken from, so they stay reproducible.
+const seed = 5
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "demogen:", err)
@@ -34,6 +37,26 @@ func run() error {
 	for _, c := range clips() {
 		if err := c.record(); err != nil {
 			return fmt.Errorf("%s: %w", c.name, err)
+		}
+	}
+	return shots()
+}
+
+// shots is the documentation set of screenshots: the world on its own, a
+// close-up of a few agents, and one per interactive view. Each is rendered
+// from a warmed-up world so there is something evolved to look at.
+func shots() error {
+	const warmup = 1500
+	for _, s := range []gui.Still{
+		{Name: "world"},
+		{Name: "closeup", Zoom: 4, CamX: 300, CamY: 200},
+		{Name: "inspector", View: "inspector"},
+		{Name: "species", View: "species"},
+		{Name: "lineage", View: "lineage"},
+		{Name: "phylogeny", View: "phylogeny"},
+	} {
+		if err := gui.Shot(gui.Config{Seed: seed}, s, warmup, outDir); err != nil {
+			return fmt.Errorf("still %s: %w", s.Name, err)
 		}
 	}
 	return nil
@@ -55,7 +78,7 @@ type clip struct {
 // population curves to move and for predation to show.
 func clips() []clip {
 	return []clip{
-		{name: "overview", ext: ".gif", seed: 5, frames: 200, scale: 2},
+		{name: "overview", ext: ".gif", seed: seed, frames: 200, scale: 2},
 	}
 }
 

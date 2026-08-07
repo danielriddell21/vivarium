@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/danielriddell21/crucible/camera"
+	"github.com/danielriddell21/crucible/canvas"
 	"github.com/danielriddell21/crucible/geom"
 
 	"github.com/danielriddell21/vivarium/internal/sim"
@@ -37,8 +38,8 @@ type Game struct {
 
 	hideSignals bool
 
-	cam      camera.Camera
-	worldImg *ebiten.Image
+	cam    camera.Camera
+	canvas *canvas.Canvas
 
 	SnapshotPath string
 	saveMsg      string
