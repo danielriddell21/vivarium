@@ -5,13 +5,20 @@ on:
     tags: ["v*"]
 
 jobs:
-  goreleaser:
-    # macOS so the cgo/Metal darwin binary can be built natively; a Linux
-    # clang cannot cross-build one.
-    uses: danielriddell21/github-actions/.github/workflows/release.yaml@v1
+  release:
+    # ubuntu, where the GoReleaser job needed macos: the GUI build no longer
+    # uses cgo, so there is no darwin toolchain to have natively.
+    uses: danielriddell21/github-actions/.github/workflows/release.yaml@v2
     permissions:
       contents: write
     with:
-      runs-on: macos-latest
+      # The CLI build's formula comes from letsgo.mod's brew directive. This
+      # is the other half: the gui variant's archives, as a cask.
+      cask-name: vivarium
+      cask-variant: gui
+      cask-desc: Watch an evolving 2D ecosystem in a native macOS window
+      cask-caveats: >-
+        The vivarium window is macOS-only; the same binary also runs
+        'vivarium headless' for batch simulations.
     secrets:
       tap-app-private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
