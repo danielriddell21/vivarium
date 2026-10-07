@@ -27,8 +27,8 @@ variant gui (
 	tags ebiten
 )
 
-// The CLI build's formula. The GUI build's cask is written after the release
-// by letsgo-cask, which letsgo does not run and cannot be changed by.
+// The CLI build's formula. The GUI build's cask is the letsgo-cask plugin
+// pinned below.
 brew danielriddell21/tap
 
 // What the formula says after installing, which is the one part of it nothing
@@ -39,3 +39,7 @@ brew caveats "The native GUI is macOS-only: on macOS install the cask with 'brew
 // publishing; letsgo does it while publishing, so promote.yaml still fires on
 // manual promotion.
 release prerelease=true
+
+// The gui variant's archives as a cask, written to the tap with the formula.
+// Settings are in .letsgo/cask.mod.
+plugin tap-files letsgo-cask v0.6.2 sha256:db20ff8adf2a15b6b7c04b9795d30cdf5c0fd45ca866996074a90f3e7a6b7f8f
