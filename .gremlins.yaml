@@ -6,6 +6,8 @@ unleash:
     mutant-coverage: 50 # skip mutants in code with <50% line coverage
   exclude-files:
     - "cmd/.*"
+    - "internal/gui/.*" # drawing: runs under the smoke tests, but nothing can assert on pixel layout
+    - "tools/.*" # generates the docs media, like cmd it only wires packages together
 
 mutants:
   arithmetic-base:
